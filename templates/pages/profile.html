@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Profile - EduLink{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="main-content">
+    <!-- Profile Banner -->
+    <div class="profile-header-banner">
+        <img id="backgroundImage" class="profile-bg-image"
+             src="{{ url_for('static', filename='images/background/' + profile.user_id|string + '/' + profile.bg_pic) }}"
+             onerror="this.style.display='none'" alt="">
+        <div class="profile-bg-overlay"></div>
+        <button class="change-bg-btn" onclick="document.getElementById('coverPicInput').click()">
+            <i class="fas fa-camera"></i> Change Cover
+        </button>
+    </div>
+
+    <!-- Profile Info -->
+    <div class="profile-info-container">
+        <div class="profile-main-card">
+            <div class="profile-top-section">
+                <div class="profile-avatar-section">
+                    <div class="profile-avatar-large" id="mainAvatar">
+                        {{ profile.profilename[0]|upper }}
+                    </div>
+                    <button class="avatar-upload-btn" onclick="document.getElementById('profilePicInput').click()">
+                        <i class="fas fa-camera"></i>
+                    </button>
+                </div>
+                <div class="profile-details">
+                    <div class="profile-name-section">
+                        <h1 class="profile-name-large" id="displayName">{{ profile.profilename }}</h1>
+                    </div>
+                    <p class="profile-username" id="displayUsername">@{{ profile.username }}</p>
+                    <p class="profile-bio" id="displayBio">{{ profile.bio }}</p>
+
+                    <div class="profile-meta">
+                        <div class="profile-meta-item"><i class="fas fa-envelope"></i><span>{{ profile.email }}</span></div>
+                        <div class="profile-meta-item"><i class="fab fa-whatsapp"></i><span>{{ profile.whatsapp }}</span></div>
+                        <div class="profile-meta-item"><i class="fas fa-calendar-alt"></i><span>Joined {{ profile.created_date }}</span></div>
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="profile-stats" style="display:flex;gap:20px;margin-top:16px;">
+                        <div style="text-align:center;">
+                            <div style="font-size:22px;font-weight:700;color:var(--primary);">{{ profile.total_stacks }}</div>
+                            <div style="font-size:12px;color:var(--text-muted);">Total Stacks</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:22px;font-weight:700;color:var(--accent-3);">{{ profile.total_sessions }}</div>
+                            <div style="font-size:12px;color:var(--text-muted);">Sessions</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Button -->
+            <div style="margin-top:20px;">
+                <button class="edit-profile-btn" id="editProfileBtn" onclick="toggleEditForm()">
+                    <i class="fas fa-edit"></i> Edit Profile
+                </button>
+            </div>
+        </div>
+
+        <!-- Edit Form (hidden by default) -->
+        <div id="editProfileForm" style="display:none;margin-top:20px;background:var(--bg-secondary);border-radius:16px;padding:24px;">
+            <h3 style="margin-bottom:16px;">Edit Profile</h3>
+            <form id="profileForm" enctype="multipart/form-data">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                    <div>
+                        <label style="font-size:13px;font-weight:600;">Profile Name</label>
+                        <input type="text" name="profilename" value="{{ profile.profilename }}" class="form-input" style="margin-top:4px;width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);">
+                    </div>
+                    <div>
+                        <label style="font-size:13px;font-weight:600;">Username</label>
+                        <input type="text" name="username" value="{{ profile.username }}" class="form-input" style="margin-top:4px;width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);">
+                    </div>
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="font-size:13px;font-weight:600;">WhatsApp</label>
+                    <input type="tel" name="whatsapp" value="{{ profile.whatsapp }}" class="form-input" style="margin-top:4px;width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);">
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="font-size:13px;font-weight:600;">Bio</label>
+                    <textarea name="bio" style="margin-top:4px;width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);resize:vertical;min-height:80px;">{{ profile.bio }}</textarea>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                    <div>
+                        <label style="font-size:13px;font-weight:600;">Profile Picture</label>
+                        <input type="file" name="profilePicInput" id="profilePicInput" accept="image/*" style="margin-top:4px;width:100%;">
+                    </div>
+                    <div>
+                        <label style="font-size:13px;font-weight:600;">Cover Picture</label>
+                        <input type="file" name="coverPicInput" id="coverPicInput" accept="image/*" style="margin-top:4px;width:100%;">
+                    </div>
+                </div>
+                <div style="display:flex;gap:12px;">
+                    <button type="button" onclick="saveProfile()" style="background:var(--primary);color:white;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;font-weight:600;">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                    <button type="button" onclick="toggleEditForm()" style="background:var(--bg-primary);border:1px solid var(--border-color);padding:10px 24px;border-radius:8px;cursor:pointer;color:var(--text-primary);">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+<script>
+function toggleEditForm() {
+    const form = document.getElementById('editProfileForm');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveProfile() {
+    const form = document.getElementById('profileForm');
+    const fd   = new FormData(form);
+
+    fetch('/api/update-profile', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                alert('Profile updated!');
+                location.reload();
+            }
+        });
+}
+</script>
+{% endblock %}

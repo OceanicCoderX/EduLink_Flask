@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - EduLink{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="main-content">
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+        <h1 class="welcome-title">Welcome back, <span id="userName">{{ user.profilename or 'User' }}</span>! 👋</h1>
+        <p class="welcome-subtitle">Here's your learning progress overview</p>
+    </div>
+
+    <!-- Stats Cards (live DB se aayengi) -->
+    <div class="stats-grid">
+        <div class="stat-card primary">
+            <div class="stat-header">
+                <div class="stat-icon primary"><i class="fas fa-clock"></i></div>
+                <div class="stat-trend up"><i class="fas fa-arrow-up"></i></div>
+            </div>
+            <div class="stat-value" id="totalStudyTime">—</div>
+            <div class="stat-label">Total Study Hours</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-header">
+                <div class="stat-icon success"><i class="fas fa-check-circle"></i></div>
+            </div>
+            <div class="stat-value" id="tasksCompleted">—</div>
+            <div class="stat-label">Tasks Completed</div>
+        </div>
+        <div class="stat-card warning">
+            <div class="stat-header">
+                <div class="stat-icon warning"><i class="fas fa-fire"></i></div>
+            </div>
+            <div class="stat-value" id="pomodoroSessions">—</div>
+            <div class="stat-label">Pomodoro Sessions</div>
+        </div>
+        <div class="stat-card danger">
+            <div class="stat-header">
+                <div class="stat-icon danger"><i class="fas fa-star"></i></div>
+            </div>
+            <div class="stat-value" id="totalStacks">—</div>
+            <div class="stat-label">Total Stacks</div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <a href="{{ url_for('focus.focus') }}" class="quick-action-btn">
+            <div class="quick-action-icon" style="background:linear-gradient(135deg,var(--primary),var(--accent-1))"><i class="fas fa-play"></i></div>
+            <span class="quick-action-label">Start Focus</span>
+        </a>
+        <a href="{{ url_for('tasks.tasks') }}" class="quick-action-btn">
+            <div class="quick-action-icon" style="background:linear-gradient(135deg,var(--accent-3),#11a889)"><i class="fas fa-plus"></i></div>
+            <span class="quick-action-label">Add Task</span>
+        </a>
+        <a href="{{ url_for('notebook.notebook') }}" class="quick-action-btn">
+            <div class="quick-action-icon" style="background:linear-gradient(135deg,var(--accent-4),#f76a1d)"><i class="fas fa-file-alt"></i></div>
+            <span class="quick-action-label">New Note</span>
+        </a>
+        <a href="{{ url_for('classroom.classroom') }}" class="quick-action-btn">
+            <div class="quick-action-icon" style="background:linear-gradient(135deg,var(--accent-2),#d62728)"><i class="fas fa-video"></i></div>
+            <span class="quick-action-label">Join Class</span>
+        </a>
+    </div>
+
+    <!-- Activity Section — recent tasks + notes from DB -->
+    <div class="activity-grid">
+        <div class="activity-card">
+            <div class="activity-header">
+                <h3 class="activity-title">Recent Tasks</h3>
+                <a href="{{ url_for('tasks.tasks') }}" class="view-all-link">View All →</a>
+            </div>
+            <div class="task-list" id="recentTasksList">
+                <div style="color:var(--text-muted);padding:16px;">Loading...</div>
+            </div>
+        </div>
+
+        <div class="activity-card">
+            <div class="activity-header">
+                <h3 class="activity-title">Recent Notes</h3>
+                <a href="{{ url_for('notebook.notebook') }}" class="view-all-link">View All →</a>
+            </div>
+            <div class="note-list" id="recentNotesList">
+                <div style="color:var(--text-muted);padding:16px;">Loading...</div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+// Dashboard stats — DB se fetch karo
+fetch('/api/dashboard-stats')
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('totalStudyTime').textContent  = data.total_hours + 'h';
+        document.getElementById('tasksCompleted').textContent  = data.completed_tasks;
+        document.getElementById('pomodoroSessions').textContent = data.total_sessions;
+        document.getElementById('totalStacks').textContent     = data.total_stacks;
+
+        // Recent tasks render
+        const tl = document.getElementById('recentTasksList');
+        if (data.recent_tasks.length === 0) {
+            tl.innerHTML = '<div style="color:var(--text-muted);padding:16px;">No tasks yet</div>';
+        } else {
+            tl.innerHTML = data.recent_tasks.map(t => `
+                <div class="task-item">
+                    <div class="task-checkbox ${t.status === 'completed' ? 'checked' : ''}">
+                        ${t.status === 'completed' ? '<i class="fas fa-check"></i>' : ''}
+                    </div>
+                    <div class="task-content">
+                        <div class="task-title">${t.title}</div>
+                        <div class="task-meta">
+                            <span class="task-category study">${t.priority || 'normal'}</span>
+                            <span><i class="far fa-calendar"></i> ${t.due_date}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Recent notes render
+        const nl = document.getElementById('recentNotesList');
+        if (data.recent_notes.length === 0) {
+            nl.innerHTML = '<div style="color:var(--text-muted);padding:16px;">No notes yet</div>';
+        } else {
+            nl.innerHTML = data.recent_notes.map(n => `
+                <div class="note-item">
+                    <div class="note-title">${n.title}</div>
+                    <div class="note-meta">
+                        <span><i class="far fa-calendar"></i> ${n.date}</span>
+                        <span><i class="far fa-folder"></i> ${n.category}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+    })
+    .catch(err => console.error('Dashboard stats error:', err));
+</script>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Focus - EduLink{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/focus.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="main-content">
+    <div class="content-left">
+        <div class="timer-section">
+            <h1 class="timer-title">🎯 Focus Timer</h1>
+            <p class="timer-subtitle">Stay focused and boost your productivity</p>
+
+            <div class="mode-selection">
+                <button class="mode-btn active" data-mode="classic"><span class="mode-label">Classic</span><span class="mode-time">25/5</span></button>
+                <button class="mode-btn" data-mode="deep"><span class="mode-label">Deep Focus</span><span class="mode-time">50/10</span></button>
+                <button class="mode-btn" data-mode="custom"><span class="mode-label">Custom</span><span class="mode-time">⚙️</span></button>
+            </div>
+
+            <div class="timer-circle">
+                <svg class="timer-svg" width="400" height="400" viewBox="0 0 400 400">
+                    <circle class="timer-circle-bg" cx="200" cy="200" r="180"></circle>
+                    <circle class="timer-circle-progress" id="circleProgress" cx="200" cy="200" r="180" stroke-dasharray="1130.97" stroke-dashoffset="0"></circle>
+                </svg>
+                <div class="timer-display">
+                    <div class="timer-time" id="timerDisplay">25:00</div>
+                    <div class="timer-label" id="timerLabel">Focus Time</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-right">
+        <div class="controls-section">
+            <h2 class="controls-title">⚡ Controls</h2>
+            <div class="timer-controls">
+                <button class="control-btn start-btn" id="startBtn"><i class="fas fa-play"></i> Start</button>
+                <button class="control-btn pause-btn" id="pauseBtn" disabled><i class="fas fa-pause"></i> Pause</button>
+                <button class="control-btn reset-btn" id="resetBtn"><i class="fas fa-redo"></i> Reset</button>
+            </div>
+
+            <!-- Task Selection -->
+            <div class="task-section">
+                <div class="task-label">What are you working on?</div>
+                <select class="task-select" id="taskSelect">
+                    <option value="Study">📚 Study</option>
+                    <option value="Meditation">🧘 Meditation</option>
+                    <option value="Reading">📖 Reading</option>
+                    <option value="Writing">✍️ Writing</option>
+                    <option value="Coding">💻 Coding</option>
+                    <option value="custom">✏️ Custom Task...</option>
+                </select>
+                <input type="text" class="task-input" id="customTaskInput" placeholder="Enter custom task...">
+            </div>
+
+            <!-- Session Stats -->
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="sessionsCount">0</div>
+                    <div class="stat-name">Sessions</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="totalTime">0</div>
+                    <div class="stat-name">Minutes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="streakCount">0</div>
+                    <div class="stat-name">Streak 🔥</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Time Modal -->
+    <div class="modal-overlay" id="customTimeModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">⚙️ Custom Timer</h2>
+                <button class="modal-close" id="closeCustomModal">&times;</button>
+            </div>
+            
+            <div class="time-inputs">
+                <div class="time-input-group">
+                    <label>Focus Time (min)</label>
+                    <input type="number" class="time-input" id="customFocusTime" min="1" max="120" value="25">
+                </div>
+                <div class="time-input-group">
+                    <label>Break Time (min)</label>
+                    <input type="number" class="time-input" id="customBreakTime" min="1" max="30" value="5">
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-secondary" id="cancelCustom">Cancel</button>
+                <button class="modal-btn modal-btn-primary" id="setCustomTime">Set Timer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Break Modal -->
+    <div class="modal-overlay" id="breakModal">
+        <div class="modal-content break-modal">
+            <div class="break-icon">
+                <i class="fas fa-coffee"></i>
+            </div>
+            <h2 class="break-message">Time for a break! 🎉</h2>
+            <p class="break-submessage">You've completed a focus session. Take a short break to recharge.</p>
+            
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-primary" id="startBreakBtn">Start Break</button>
+                <button class="modal-btn modal-btn-secondary" id="skipBreakBtn">Skip Break</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio for break alert -->
+    <audio id="breakSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYGGGS56eadTwwOUKXh8LRiHQU2jdXxy3ImBSd0xO/ekEELFVuw6OqlVRUKQZrg8r1rIAUsgtDz2og1BRdltunnn1EMDk6h4O+zYhwGM4fU8chxJAUrcML03I9BCRFbr+jqpVQaC0COzujwvWodBSuB0fPXhzUEGGu66OTAVAwJUKzn77RgGwU0jdXyx3IjBS5+wPLgizsIElu06+ifUBUIRp3h8rljIAYqgdDz14g1BRVmtel0pF0WClSi4u+5Zhwc" type="audio/wav">
+    </audio>
+
+    
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/focus.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Tasks - EduLink{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tasks.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="main-content">
+    <!-- Header -->
+    <div class="tasks-header">
+        <div class="header-left"><h1>📋 Tasks & Calendar</h1></div>
+        <div class="header-actions">
+            <button class="action-btn btn-secondary" id="exportExcelBtn"><i class="fas fa-file-excel"></i><span>Export</span></button>
+            <button class="action-btn btn-primary" id="addTaskBtn"><i class="fas fa-plus"></i><span>Add Task</span></button>
+        </div>
+    </div>
+
+    <!-- Progress Ring -->
+    <div class="progress-section">
+        <div class="progress-ring-container">
+            <svg class="progress-ring" width="160" height="160">
+                <defs>
+                    <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#5e72e4;stop-opacity:1"/>
+                        <stop offset="100%" style="stop-color:#2dceb1;stop-opacity:1"/>
+                    </linearGradient>
+                </defs>
+                <circle class="progress-ring-bg" cx="80" cy="80" r="70"></circle>
+                <circle class="progress-ring-circle" cx="80" cy="80" r="70" stroke-dasharray="439.82" stroke-dashoffset="439.82" id="progressCircle"></circle>
+            </svg>
+            <div class="progress-text">
+                <span class="progress-percentage" id="progressPercentage">0%</span>
+                <span class="progress-label">Completed</span>
+            </div>
+        </div>
+        <div class="progress-stats">
+            <div class="stat-card"><span class="stat-value" id="totalTasksCount">0</span><span class="stat-label">Total Tasks</span></div>
+            <div class="stat-card"><span class="stat-value" id="completedTasksCount">0</span><span class="stat-label">Completed</span></div>
+            <div class="stat-card"><span class="stat-value" id="pendingTasksCount">0</span><span class="stat-label">Pending</span></div>
+            <div class="stat-card"><span class="stat-value" id="todayTasksCount">0</span><span class="stat-label">Due Today</span></div>
+        </div>
+    </div>
+
+    <!-- View Controls -->
+    <div class="view-controls">
+        <div class="view-toggle">
+            <button class="view-btn active" data-view="daily"><i class="fas fa-calendar-day"></i> Daily</button>
+            <button class="view-btn" data-view="weekly"><i class="fas fa-calendar-week"></i> Weekly</button>
+            <button class="view-btn" data-view="monthly"><i class="fas fa-calendar"></i> Monthly</button>
+        </div>
+        <div class="search-filter-container">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Search tasks...">
+            </div>
+            <button class="filter-btn" id="filterBtn"><i class="fas fa-filter"></i><span>Filter</span></button>
+        </div>
+    </div>
+
+    <!-- Calendar -->
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <h2 class="calendar-title" id="calendarTitle">Today</h2>
+            <div class="calendar-nav">
+                <button class="nav-arrow" id="prevBtn"><i class="fas fa-chevron-left"></i></button>
+                <button class="nav-arrow" id="todayBtn"><i class="fas fa-calendar-day"></i></button>
+                <button class="nav-arrow" id="nextBtn"><i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>
+        <div class="daily-view active" id="dailyView"><div class="daily-timeline" id="dailyTimeline"></div></div>
+        <div class="weekly-view" id="weeklyView"><div class="week-grid" id="weekGrid"></div></div>
+        <div class="monthly-view" id="monthlyView"><div class="month-grid" id="monthGrid"></div></div>
+    </div>
+
+    <!-- Tasks List -->
+    <div class="tasks-list-container">
+        <div class="tasks-list-header">
+            <h2 class="tasks-list-title">All Tasks</h2>
+            <div class="task-filters">
+                <span class="filter-chip active" data-filter="all">All</span>
+                <span class="filter-chip" data-filter="pending">Pending</span>
+                <span class="filter-chip" data-filter="completed">Completed</span>
+                <span class="filter-chip" data-filter="high">High Priority</span>
+            </div>
+        </div>
+        <div class="tasks-list" id="tasksList">
+            <div class="empty-state" id="emptyState">
+                <div class="empty-icon"><i class="fas fa-clipboard-list"></i></div>
+                <div class="empty-title">No tasks yet</div>
+                <div class="empty-text">Click "Add Task" to create your first task</div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Add/Edit Task Modal -->
+<div class="modal" id="taskModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalTitle">Add New Task</h2>
+            <button class="modal-close" id="closeModalBtn"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="taskForm">
+                <div class="form-group">
+                    <label class="form-label">Task Title <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="taskTitle" name="taskTitle" placeholder="Enter task title" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" id="taskDescription" name="taskDescription" placeholder="Add task details..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Due Date & Time <span class="required">*</span></label>
+                    <div class="time-input-group">
+                        <input type="date" class="form-input" id="taskDate" name="taskDate" required>
+                        <input type="time" class="form-input" id="taskTime" name="taskTime" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Priority <span class="required">*</span></label>
+                    <div class="priority-options" id="taskPriority">
+                        <div class="priority-option high" data-priority="high"><i class="fas fa-exclamation-circle"></i> High</div>
+                        <div class="priority-option medium selected" data-priority="medium"><i class="fas fa-exclamation-triangle"></i> Medium</div>
+                        <div class="priority-option low" data-priority="low"><i class="fas fa-check-circle"></i> Low</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Recurring</label>
+                    <select class="form-select" id="taskRecurring" name="taskRecurring">
+                        <option value="once">Only Today</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-btn btn-cancel" id="cancelBtn">Cancel</button>
+                    <button type="button" class="modal-btn btn-save" id="saveTaskBtn"><i class="fas fa-save"></i> Save Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/tasks.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - EduLink</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+    <div class="loading-overlay" id="loadingSpinner"><div class="spinner"></div></div>
+
+    <div class="login-container">
+        <div class="login-bg"></div>
+        <div class="login-card">
+            <div class="back-page">
+                <a href="{{ url_for('auth.index') }}"><i class="fa-solid fa-arrow-left"></i> Back</a>
+            </div>
+            
+            <div class="login-header">
+                <div class="logo-circle">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="EduLink Logo">
+                </div>
+                <h1 class="login-title">Welcome Back!</h1>
+            </div>
+
+            <!-- Error message (Flask se aata hai) -->
+            {% if error %}
+            <div class="error-message" style="display:block;">
+                <i class="fas fa-exclamation-circle"></i> {{ error }}
+            </div>
+            {% endif %}
+
+            <!-- Login Form — action Flask route pe -->
+            <form id="loginForm" action="{{ url_for('auth.login') }}" method="POST">
+                <div class="form-group">
+                    <label class="form-label" for="email">Email Address</label>
+                    <div class="input-wrapper">
+                        <input type="email" id="email" name="email" class="form-input" placeholder="Enter your email" required>
+                        <i class="fas fa-envelope input-icon"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="password" name="password" class="form-input" placeholder="Enter your password" required>
+                        <i class="fas fa-eye input-icon" id="togglePassword"></i>
+                    </div>
+                </div>
+
+                <div class="forgot-password-wrapper">
+                    <a href="{{ url_for('auth.forgot_password') }}" class="forgot-password">Forgot Password?</a>
+                </div>
+
+                <button type="submit" class="login-btn">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+            </form>
+
+            <div class="signup-link">
+                Don't have an account? <a href="{{ url_for('auth.signup') }}">Sign Up</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+</body>
+</html>

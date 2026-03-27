@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="EduLink - AI-powered study companion for students and professionals. Focus better, learn smarter, achieve your goals.">
+    <meta name="keywords" content="study app, pomodoro timer, task management, AI notes, productivity, learning">
+    <title>EduLink - Focus More. Learn Better. Achieve Goals.</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/images/logo.png">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- AOS Animation Library -->
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css">
+    
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!--link href="../static/css/style.css"-->
+</head>
+<body>
+
+    <!-- ========== NAVBAR ========== -->
+    <nav class="navbar">
+        <div class="container" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+            <!-- Logo -->
+            <a href="{{ url_for('auth.index') }}" class="navbar-brand">
+                <img src="/static/images/logo.png" alt="EduLink Logo" class="navbar-logo">
+                <span>EduLink</span>
+            </a>
+            
+            <!-- Desktop Navigation -->
+            <ul class="navbar-menu" id="navbarMenu">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#how-it-works">How it Works</a></li>
+                <li><a href="#testimonials">Testimonials</a></li>
+                <li><a href="#faq">FAQ</a></li>
+            </ul>
+            
+            <!-- Right Side Buttons -->
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Login</a>
+                <a href="{{ url_for('auth.signup') }}" class="btn btn-primary">Get Started</a>
+            </div>
+            
+            <!-- Mobile Menu Toggle -->
+            <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ========== HERO SECTION ========== -->
+    <section class="hero" id="home">
+        <div class="container">
+            <div class="hero-content">
+                <!-- Left Content -->
+                <div class="hero-text" data-aos="fade-right">
+                    <h1>Focus More. Learn Better. Achieve Goals.</h1>
+                    <p class="hero-subtitle">AI-powered study companion for students & professionals</p>
+                    
+                    <!-- Key Points -->
+                    <div class="hero-features" style="margin: 32px 0;">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <i class="fas fa-check-circle" style="color: var(--accent-3); font-size: 20px;"></i>
+                            <span style="color: var(--text-secondary); font-size: 16px;">Smart Pomodoro Timer</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <i class="fas fa-check-circle" style="color: var(--accent-3); font-size: 20px;"></i>
+                            <span style="color: var(--text-secondary); font-size: 16px;">AI-Powered Notes</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <i class="fas fa-check-circle" style="color: var(--accent-3); font-size: 20px;"></i>
+                            <span style="color: var(--text-secondary); font-size: 16px;">Progress Analytics</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <i class="fas fa-check-circle" style="color: var(--accent-3); font-size: 20px;"></i>
+                            <span style="color: var(--text-secondary); font-size: 16px;">Collaborative Learning</span>
+                        </div>
+                    </div>
+                    
+                    <!-- CTA Buttons -->
+                    <div class="hero-buttons">
+                        <a href="{{ url_for('auth.signup') }}" class="btn btn-primary btn-lg btn-icon">
+                            <i class="fas fa-rocket"></i>
+                            Get Started Free
+                        </a>
+                        <button class="btn btn-secondary btn-lg btn-icon" id="watchDemoBtn">
+                            <i class="fas fa-play-circle"></i>
+                            Watch Demo
+                        </button>
+                    </div>
+                    
+                    <!-- Trust Badge -->
+                    <p style="margin-top: 24px; color: var(--text-muted); font-size: 14px;">
+                        <i class="fas fa-shield-alt" style="color: var(--accent-3);"></i>
+                        No credit card required • Free forever
+                    </p>
+                </div>
+                
+                <!-- Right Image -->
+                <div class="hero-image" data-aos="fade-left" data-aos-delay="200">
+                    <img src="/static/images/dashboard.jpg" alt="EduLink Dashboard" style="animation: float 3s ease-in-out infinite;">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== STATS SECTION ========== -->
+    <section style="background-color: var(--bg-secondary); padding: 60px 0;">
+        <div class="container">
+            <div class="stats-grid" data-aos="fade-up">
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; font-weight: 700; color: var(--primary); margin-bottom: 8px;">10,000+</div>
+                    <div style="color: var(--text-secondary); font-size: 16px;">Active Users</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; font-weight: 700; color: var(--accent-3); margin-bottom: 8px;">50,000+</div>
+                    <div style="color: var(--text-secondary); font-size: 16px;">Study Sessions</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; font-weight: 700; color: var(--accent-4); margin-bottom: 8px;">100,000+</div>
+                    <div style="color: var(--text-secondary); font-size: 16px;">Tasks Completed</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; font-weight: 700; color: var(--accent-2); margin-bottom: 8px;">4.8★</div>
+                    <div style="color: var(--text-secondary); font-size: 16px;">Average Rating</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== FEATURES SECTION ========== -->
+    <section class="features" id="features">
+        <div class="container">
+            <!-- Section Header -->
+            <div class="section-header" data-aos="fade-up">
+                <h2 class="section-title">Everything You Need to Excel</h2>
+                <p class="section-subtitle">Powerful features designed to boost your productivity and learning</p>
+            </div>
+            
+            <!-- Features Grid -->
+            <div class="grid grid-3" style="margin-top: 60px;">
+                <!-- Feature 1: Pomodoro Timer -->
+                <div class="feature-card card" data-aos="fade-up" data-aos-delay="100">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #6a6ce4, #5e72e4);">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3>Stay Focused</h3>
+                    <p>25/5, 50/10, or custom Pomodoro sessions with task tracking and break reminders</p>
+                </div>
+                
+                <!-- Feature 2: Task Management -->
+                <div class="feature-card card" data-aos="fade-up" data-aos-delay="200">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #2dceb1, #11a889);">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <h3>Plan & Organize</h3>
+                    <p>Calendar integration with daily, weekly & monthly views for perfect planning</p>
+                </div>
+                
+                <!-- Feature 3: Analytics -->
+                <div class="feature-card card" data-aos="fade-up" data-aos-delay="300">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #fb8940, #f76a1d);">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Track Your Growth</h3>
+                    <p>Visual insights into study time, tasks completion & productivity trends</p>
+                </div>
+                
+                <!-- Feature 4: AI Notes -->
+                <div class="feature-card card" data-aos="fade-up" data-aos-delay="100">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #5e72e4, #3b4ec4);">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>Smart Note-Taking</h3>
+                    <p>Convert raw notes into structured, revision-ready formats with AI assistance</p>
+                </div>
+                
+                <!-- Feature 5: Collaboration -->
+                <div class="feature-card card" data-aos="fade-up" data-aos-delay="200">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #f5494a, #d62728);">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3>Learn Together</h3>
+                    <p>Study rooms, video classes & shared notes for collaborative learning</p>
+                </div>
+                
+                <!-- Feature 6: Reminders -->
+                <div class="feature-card card" data-aos="fade-up" data-aos-delay="300">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #2dceb1, #11a889);">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <h3>Never Miss a Task</h3>
+                    <p>WhatsApp notifications for tasks, deadlines & scheduled study sessions</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== HOW IT WORKS SECTION ========== -->
+    <section id="how-it-works" style="background-color: var(--bg-secondary); padding: 80px 0;">
+        <div class="container">
+            <!-- Section Header -->
+            <div class="section-header" data-aos="fade-up">
+                <h2 class="section-title">Get Started in 3 Simple Steps</h2>
+                <p class="section-subtitle">Start your learning journey in minutes</p>
+            </div>
+            
+            <!-- Steps -->
+            <div class="grid grid-3" style="margin-top: 60px; gap: 40px;">
+                <!-- Step 1 -->
+                <div style="text-align: center; position: relative;" data-aos="fade-up" data-aos-delay="100">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, var(--primary), var(--accent-1)); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 36px; color: white; position: relative;">
+                        <i class="fas fa-user-plus"></i>
+                        <div style="position: absolute; top: -10px; right: -10px; width: 32px; height: 32px; background-color: var(--accent-2); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; border: 3px solid var(--bg-secondary);">1</div>
+                    </div>
+                    <h3 style="margin-bottom: 12px;">Create Your Account</h3>
+                    <p style="color: var(--text-secondary);">Sign up free in seconds. No credit card needed.</p>
+                </div>
+                
+                <!-- Step 2 -->
+                <div style="text-align: center; position: relative;" data-aos="fade-up" data-aos-delay="200">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, var(--accent-3), #11a889); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 36px; color: white; position: relative;">
+                        <i class="fas fa-bullseye"></i>
+                        <div style="position: absolute; top: -10px; right: -10px; width: 32px; height: 32px; background-color: var(--accent-2); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; border: 3px solid var(--bg-secondary);">2</div>
+                    </div>
+                    <h3 style="margin-bottom: 12px;">Plan Your Study</h3>
+                    <p style="color: var(--text-secondary);">Add tasks, set goals, schedule focus sessions.</p>
+                </div>
+                
+                <!-- Step 3 -->
+                <div style="text-align: center; position: relative;" data-aos="fade-up" data-aos-delay="300">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, var(--accent-4), #f76a1d); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 36px; color: white; position: relative;">
+                        <i class="fas fa-chart-bar"></i>
+                        <div style="position: absolute; top: -10px; right: -10px; width: 32px; height: 32px; background-color: var(--accent-2); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; border: 3px solid var(--bg-secondary);">3</div>
+                    </div>
+                    <h3 style="margin-bottom: 12px;">Watch Yourself Grow</h3>
+                    <p style="color: var(--text-secondary);">Track time, analyze progress, achieve consistency.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== TESTIMONIALS SECTION ========== -->
+    <section id="testimonials" style="padding: 80px 0;">
+        <div class="container">
+            <!-- Section Header -->
+            <div class="section-header" data-aos="fade-up">
+                <h2 class="section-title">Loved by Students Worldwide</h2>
+                <p class="section-subtitle">See what our users have to say about EduLink</p>
+            </div>
+            
+            <!-- Testimonials Grid -->
+            <div class="grid grid-3" style="margin-top: 60px;">
+                <!-- Testimonial 1 -->
+                <div class="card" data-aos="fade-up" data-aos-delay="100">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                        <img src="/static/images/testimonials/user1.jpg" alt="Priya Sharma" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                        <div>
+                            <div style="font-weight: 600; color: var(--text-primary);">Priya Sharma</div>
+                            <div style="font-size: 14px; color: var(--text-secondary);">NEET Aspirant</div>
+                        </div>
+                    </div>
+                    <div style="color: var(--accent-4); margin-bottom: 12px; font-size: 18px;">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <p style="color: var(--text-secondary); font-style: italic;">"EduLink transformed my study routine! The Pomodoro timer helped me stay focused for longer hours. Scored 680/720 in NEET 2024!"</p>
+                </div>
+                
+                <!-- Testimonial 2 -->
+                <div class="card" data-aos="fade-up" data-aos-delay="200">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                        <img src="/static/images/testimonials/user2.jpg" alt="Rahul Kumar" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                        <div>
+                            <div style="font-weight: 600; color: var(--text-primary);">Rahul Kumar</div>
+                            <div style="font-size: 14px; color: var(--text-secondary);">JEE Aspirant</div>
+                        </div>
+                    </div>
+                    <div style="color: var(--accent-4); margin-bottom: 12px; font-size: 18px;">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <p style="color: var(--text-secondary); font-style: italic;">"The analytics feature is mind-blowing! I could see exactly where I was spending time. Helped me get into IIT Bombay!"</p>
+                </div>
+                
+                <!-- Testimonial 3 -->
+                <div class="card" data-aos="fade-up" data-aos-delay="300">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                        <img src="/static/images/testimonials/user3.jpg" alt="Sneha Patel" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                        <div>
+                            <div style="font-weight: 600; color: var(--text-primary);">Sneha Patel</div>
+                            <div style="font-size: 14px; color: var(--text-secondary);">MBA Student</div>
+                        </div>
+                    </div>
+                    <div style="color: var(--accent-4); margin-bottom: 12px; font-size: 18px;">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <p style="color: var(--text-secondary); font-style: italic;">"Best productivity tool ever! The collaborative features helped our study group coordinate perfectly. Highly recommended!"</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== FAQ SECTION ========== -->
+    <section id="faq" style="background-color: var(--bg-secondary); padding: 80px 0;">
+        <div class="container">
+            <!-- Section Header -->
+            <div class="section-header" data-aos="fade-up">
+                <h2 class="section-title">Frequently Asked Questions</h2>
+                <p class="section-subtitle">Everything you need to know about EduLink</p>
+            </div>
+            
+            <!-- FAQ Items -->
+            <div style="max-width: 800px; margin: 60px auto 0;">
+                <!-- FAQ 1 -->
+                <div class="card" style="margin-bottom: 16px; cursor: pointer;" data-aos="fade-up" data-aos-delay="100" onclick="toggleFAQ(this)">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h4 style="margin: 0; color: var(--text-primary);">Is EduLink completely free?</h4>
+                        <i class="fas fa-chevron-down" style="color: var(--primary); transition: transform 0.3s;"></i>
+                    </div>
+                    <div class="faq-answer" style="max-height: 0; overflow: hidden; transition: max-height 0.3s ease;">
+                        <p style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); color: var(--text-secondary);">Yes! EduLink is completely free to use with all core features including Pomodoro timer, task management, notes, and analytics. No credit card required.</p>
+                    </div>
+                </div>
+                
+                <!-- FAQ 2 -->
+                <div class="card" style="margin-bottom: 16px; cursor: pointer;" data-aos="fade-up" data-aos-delay="200" onclick="toggleFAQ(this)">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h4 style="margin: 0; color: var(--text-primary);">Can I use EduLink on mobile devices?</h4>
+                        <i class="fas fa-chevron-down" style="color: var(--primary); transition: transform 0.3s;"></i>
+                    </div>
+                    <div class="faq-answer" style="max-height: 0; overflow: hidden; transition: max-height 0.3s ease;">
+                        <p style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); color: var(--text-secondary);">Absolutely! EduLink is fully responsive and works seamlessly on desktop, tablet, and mobile devices. Access your study dashboard anywhere, anytime.</p>
+                    </div>
+                </div>
+                
+                <!-- FAQ 3 -->
+                <div class="card" style="margin-bottom: 16px; cursor: pointer;" data-aos="fade-up" data-aos-delay="300" onclick="toggleFAQ(this)">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h4 style="margin: 0; color: var(--text-primary);">How does the AI note-taking work?</h4>
+                        <i class="fas fa-chevron-down" style="color: var(--primary); transition: transform 0.3s;"></i>
+                    </div>
+                    <div class="faq-answer" style="max-height: 0; overflow: hidden; transition: max-height 0.3s ease;">
+                        <p style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); color: var(--text-secondary);">Our AI analyzes your raw notes and converts them into well-structured, organized formats with proper headings, bullet points, and summaries - perfect for quick revision.</p>
+                    </div>
+                </div>
+                
+                <!-- FAQ 4 -->
+                <div class="card" style="margin-bottom: 16px; cursor: pointer;" data-aos="fade-up" data-aos-delay="100" onclick="toggleFAQ(this)">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h4 style="margin: 0; color: var(--text-primary);">Is my data secure and private?</h4>
+                        <i class="fas fa-chevron-down" style="color: var(--primary); transition: transform 0.3s;"></i>
+                    </div>
+                    <div class="faq-answer" style="max-height: 0; overflow: hidden; transition: max-height 0.3s ease;">
+                        <p style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); color: var(--text-secondary);">Yes! We use industry-standard encryption and security practices. Your personal data and study notes are completely private and never shared with third parties.</p>
+                    </div>
+                </div>
+                
+                <!-- FAQ 5 -->
+                <div class="card" style="margin-bottom: 16px; cursor: pointer;" data-aos="fade-up" data-aos-delay="200" onclick="toggleFAQ(this)">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h4 style="margin: 0; color: var(--text-primary);">Can I collaborate with my study group?</h4>
+                        <i class="fas fa-chevron-down" style="color: var(--primary); transition: transform 0.3s;"></i>
+                    </div>
+                    <div class="faq-answer" style="max-height: 0; overflow: hidden; transition: max-height 0.3s ease;">
+                        <p style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); color: var(--text-secondary);">Yes! EduLink offers study rooms, video classrooms, and shared notes features so you can learn together with your peers in real-time.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== CTA SECTION ========== -->
+    <section style="background: linear-gradient(135deg, var(--primary), var(--accent-1)); padding: 80px 0; color: white;">
+        <div class="container" style="text-align: center;" data-aos="zoom-in">
+            <h2 style="font-size: 40px; margin-bottom: 16px; color: white;">Ready to Transform Your Study Routine?</h2>
+            <p style="font-size: 20px; margin-bottom: 40px; opacity: 0.9;">Join thousands of students already achieving their goals with EduLink</p>
+            <div style="display: flex; gap: 16px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                <a href="{{ url_for('auth.signup') }}" class="btn btn-lg" style="background-color: white; color: var(--primary); font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+                    <i class="fas fa-rocket"></i>
+                    Get Started - It's Free
+                </a>
+                <div style="display: flex; align-items: center; gap: 8px; opacity: 0.9;">
+                    <i class="fas fa-check-circle"></i>
+                    <span>No credit card required</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== FOOTER ========== -->
+    <footer style="background-color: var(--bg-secondary); padding: 60px 0 20px; border-top: 1px solid var(--border-color);">
+        <div class="container">
+            <div class="grid grid-4" style="margin-bottom: 40px;">
+                <!-- Column 1: About -->
+                <div>
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                        <img src="/static/images/logo.png" alt="EduLink Logo" style="height: 40px;">
+                        <span style="font-size: 24px; font-weight: 700; color: var(--text-primary); font-family: var(--font-heading);">EduLink</span>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">AI-powered study companion for students and professionals.</p>
+                    <div style="display: flex; gap: 12px;">
+                        <a href="#" style="width: 40px; height: 40px; background-color: var(--bg-tertiary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); transition: all 0.3s;" onmouseover="this.style.backgroundColor='var(--primary)'; this.style.color='white';" onmouseout="this.style.backgroundColor='var(--bg-tertiary)'; this.style.color='var(--text-secondary)';">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" style="width: 40px; height: 40px; background-color: var(--bg-tertiary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); transition: all 0.3s;" onmouseover="this.style.backgroundColor='var(--primary)'; this.style.color='white';" onmouseout="this.style.backgroundColor='var(--bg-tertiary)'; this.style.color='var(--text-secondary)';">
+                            <i class="fab fa-linkedin"></i>
+                        </a>
+                        <a href="#" style="width: 40px; height: 40px; background-color: var(--bg-tertiary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); transition: all 0.3s;" onmouseover="this.style.backgroundColor='var(--primary)'; this.style.color='white';" onmouseout="this.style.backgroundColor='var(--bg-tertiary)'; this.style.color='var(--text-secondary)';">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                        <a href="#" style="width: 40px; height: 40px; background-color: var(--bg-tertiary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); transition: all 0.3s;" onmouseover="this.style.backgroundColor='var(--primary)'; this.style.color='white';" onmouseout="this.style.backgroundColor='var(--bg-tertiary)'; this.style.color='var(--text-secondary)';">
+                            <i class="fab fa-youtube"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Column 2: Product -->
+                <div>
+                    <h4 style="margin-bottom: 20px; color: var(--text-primary);">Product</h4>
+                    <ul style="list-style: none;">
+                        <li style="margin-bottom: 12px;"><a href="#features" style="color: var(--text-secondary); transition: color 0.3s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-secondary)'">Features</a></li>
+                        <li style="margin-bottom: 12px;"><a href="#how-it-works" style="color: var(--text-secondary); transition: color 0.3s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-secondary)'">How it Works</a></li>
+                        <li style="margin-bottom: 12px;"><a href="#testimonials" style="color: var(--text-secondary); transition: color 0.3s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-secondary)'">Testimonials</a></li>
+                        <li style="margin-bottom: 12px;"><a href="#faq" style="color: var(--text-secondary); transition: color 0.3s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-secondary)'">FAQ</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Column 3: Company -->
+                <div>
+                    <h4 style="margin-bottom: 20px; color: var(--text-primary);">Company</h4>
+                    <ul style="list-style: none;">
+                        <li style="margin-bottom: 12px;"><a href="#" style="color: var(--text-secondary); transition: color 0.3s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-secondary)'">About Us</a></li>
+                        <li style="margin-bottom: 12px;"><a href="#" style="color: var(--text-secondary); transition: color 0.3s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-secondary)'">Blog</a></li>
+                        <li style="margin-bottom: 12px;"><a href="#" style="color: var(--text-secondary); transition: color 0.3s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-secondary)'">Careers</a></li>
+                        <li style="margin-bottom: 12px;"><a href="#" style="color: var(--text-secondary); transition: color 0.3s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-secondary)'">Contact</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Column 4: Legal -->
+                <div>
+                    <h4 style="margin-bottom: 20px; color: var(--text-primary);">Legal</h4>
+                    <ul style="list-style: none;">
+                        <li style="margin-bottom: 12px;"><a href="#" style="color: var(--text-secondary); transition: color 0.3s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-secondary)'">Privacy Policy</a></li>
+                        <li style="margin-bottom: 12px;"><a href="#" style="color: var(--text-secondary); transition: color 0.3s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-secondary)'">Terms of Service</a></li>
+                        <li style="margin-bottom: 12px;"><a href="#" style="color: var(--text-secondary); transition: color 0.3s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-secondary)'">Cookie Policy</a></li>
+                        <li style="margin-bottom: 12px;"><a href="#" style="color: var(--text-secondary); transition: color 0.3s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-secondary)'">Disclaimer</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Copyright -->
+            <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border-color);">
+                <p style="color: var(--text-muted); font-size: 14px;">
+                    © 2024 EduLink. All rights reserved. Made with <i class="fas fa-heart" style="color: var(--accent-2);"></i> for students
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ========== DEMO VIDEO MODAL ========== -->
+    <div class="modal" id="demoModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 style="margin: 0;">EduLink Demo</h3>
+                <button class="modal-close" id="closeModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 24px 0;">
+                <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; background-color: #000; border-radius: 8px;">
+                    <iframe 
+                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+                        src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+                        title="EduLink Demo Video" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowfullscreen>
+                    </iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== FLOATING ANIMATION KEYFRAMES ========== -->
+    <style>
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+    </style>
+
+    <!-- AOS Animation Library -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
+    <!-- Page-specific Scripts -->
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        
+        // Check for saved theme preference or default to 'light'
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', currentTheme);
+        updateThemeIcon(currentTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const theme = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            updateThemeIcon(theme);
+        });
+
+        function updateThemeIcon(theme) {
+            const icon = themeToggle.querySelector('i');
+            icon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+        }
+
+        // Mobile Menu Toggle
+        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+        const navbarMenu = document.getElementById('navbarMenu');
+
+        mobileMenuToggle.addEventListener('click', () => {
+            navbarMenu.classList.toggle('active');
+            const icon = mobileMenuToggle.querySelector('i');
+            icon.className = navbarMenu.classList.contains('active') ? 'fas fa-times' : 'fas fa-bars';
+        });
+
+        // Close mobile menu when clicking on a link
+        document.querySelectorAll('.navbar-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                navbarMenu.classList.remove('active');
+                mobileMenuToggle.querySelector('i').className = 'fas fa-bars';
+            });
+        });
+
+        // Demo Modal
+        const watchDemoBtn = document.getElementById('watchDemoBtn');
+        const demoModal = document.getElementById('demoModal');
+        const closeModal = document.getElementById('closeModal');
+
+        watchDemoBtn.addEventListener('click', () => {
+            demoModal.classList.add('active');
+        });
+
+        closeModal.addEventListener('click', () => {
+            demoModal.classList.remove('active');
+        });
+
+        // Close modal on outside click
+        demoModal.addEventListener('click', (e) => {
+            if (e.target === demoModal) {
+                demoModal.classList.remove('active');
+            }
+        });
+
+        // FAQ Toggle
+        function toggleFAQ(element) {
+            const answer = element.querySelector('.faq-answer');
+            const icon = element.querySelector('i');
+            
+            // Close all other FAQs
+            document.querySelectorAll('.faq-answer').forEach(item => {
+                if (item !== answer) {
+                    item.style.maxHeight = '0';
+                    item.parentElement.querySelector('i').style.transform = 'rotate(0deg)';
+                }
+            });
+            
+            // Toggle current FAQ
+            if (answer.style.maxHeight && answer.style.maxHeight !== '0px') {
+                answer.style.maxHeight = '0';
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                answer.style.maxHeight = answer.scrollHeight + 'px';
+                icon.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    const offset = 80; // Navbar height
+                    const targetPosition = target.offsetTop - offset;
+                    window.scrollTo({
+                        top: targetPosition,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // Add scroll effect to navbar
+        window.addEventListener('scroll', () => {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.style.boxShadow = '0 4px 20px var(--shadow-medium)';
+            } else {
+                navbar.style.boxShadow = '0 2px 10px var(--shadow-light)';
+            }
+        });
+    </script>
+</body>
+</html>

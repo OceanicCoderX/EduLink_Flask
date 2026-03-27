@@ -1,0 +1,573 @@
+.community-page {
+            display: flex;
+            min-height: 100vh;
+            background-color: var(--bg-secondary);
+        }
+
+        /* Sidebar */
+        
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Friends Section (Top) */
+        .friends-section {
+            background-color: var(--bg-primary);
+            padding: 24px 40px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .friends-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .friends-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .add-friend-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, var(--primary), var(--accent-1));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .add-friend-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(94, 114, 228, 0.3);
+        }
+
+        .friends-list {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+
+        .friend-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            min-width: 80px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .friend-item:hover {
+            transform: translateY(-4px);
+        }
+
+        .friend-avatar-wrapper {
+            position: relative;
+        }
+
+        .friend-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--accent-3));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 24px;
+            border: 3px solid var(--bg-primary);
+        }
+
+        .online-indicator {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 16px;
+            height: 16px;
+            background-color: var(--accent-3);
+            border: 3px solid var(--bg-primary);
+            border-radius: 50%;
+        }
+
+        .offline-indicator {
+            background-color: var(--text-muted);
+        }
+
+        .friend-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-align: center;
+        }
+
+        /* Content Layout */
+        .content-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Feed Section (Center) */
+        .feed-section {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .create-post-card {
+            background-color: var(--bg-primary);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .create-post-input {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 15px;
+            margin-bottom: 12px;
+            resize: vertical;
+            min-height: 80px;
+            font-family: var(--font-body);
+        }
+
+        .create-post-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .create-post-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .post-media-btns {
+            display: flex;
+            gap: 12px;
+        }
+
+        .media-btn {
+            padding: 8px 16px;
+            border: 2px solid var(--border-color);
+            background-color: var(--bg-secondary);
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+        }
+
+        .media-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .post-btn {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, var(--primary), var(--accent-1));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .post-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(94, 114, 228, 0.3);
+        }
+
+        /* Feed Filters */
+        .feed-filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            border: 2px solid var(--border-color);
+            background-color: var(--bg-primary);
+            color: var(--text-secondary);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, var(--primary), var(--accent-1));
+            color: white;
+            border-color: transparent;
+        }
+
+        /* Post Card */
+        .post-card {
+            background-color: var(--bg-primary);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .post-header {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .post-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--accent-3));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 20px;
+        }
+
+        .post-user-info {
+            flex: 1;
+        }
+
+        .post-username {
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .post-time {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .post-content {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        .post-actions {
+            display: flex;
+            gap: 24px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .post-action-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .post-action-btn:hover {
+            background-color: var(--bg-secondary);
+            color: var(--primary);
+        }
+
+        .post-action-btn.liked {
+            color: var(--accent-2);
+        }
+
+        /* Right Sidebar - Achievements & Leaderboard */
+        .right-sidebar {
+            width: 360px;
+            background-color: var(--bg-primary);
+            border-left: 1px solid var(--border-color);
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        /* Achievements Section */
+        .achievements-section {
+            margin-bottom: 32px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .unlock-count {
+            font-size: 14px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .achievement-card {
+            background-color: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .achievement-card.unlocked {
+            border-color: var(--accent-3);
+            background: linear-gradient(135deg, rgba(94, 114, 228, 0.1), rgba(45, 206, 177, 0.1));
+        }
+
+        .achievement-card.locked {
+            opacity: 0.5;
+            filter: grayscale(1);
+        }
+
+        .achievement-icon {
+            font-size: 40px;
+            margin-bottom: 8px;
+        }
+
+        .achievement-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .achievement-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .achievement-date {
+            font-size: 11px;
+            color: var(--accent-3);
+            font-weight: 600;
+        }
+
+        /* Friend Stats */
+        .friend-stats {
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background-color: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            font-family: var(--font-heading);
+        }
+
+        .stat-unit {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-left: 4px;
+        }
+
+        /* Leaderboard */
+        .leaderboard-section {
+            margin-bottom: 20px;
+        }
+
+        .leaderboard-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background-color: var(--bg-secondary);
+            border-radius: 10px;
+        }
+
+        .leaderboard-rank {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            border-radius: 8px;
+        }
+
+        .leaderboard-rank.top {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: white;
+        }
+
+        .leaderboard-rank.normal {
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .leaderboard-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--accent-3));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+        }
+
+        .leaderboard-info {
+            flex: 1;
+        }
+
+        .leaderboard-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .leaderboard-points {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Mobile Bottom Navigation */
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .right-sidebar {
+                width: 300px;
+            }
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                margin-left: 0;
+            }
+
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .mobile-nav {
+                display: block;
+            }
+
+            .content-layout {
+                flex-direction: column;
+            }
+
+            .right-sidebar {
+                width: 100%;
+                border-left: none;
+                border-top: 1px solid var(--border-color);
+            }
+
+            .friends-section {
+                padding: 20px;
+            }
+
+            .feed-section {
+                padding: 16px;
+            }
+
+            .achievements-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .friends-section {
+                padding: 16px;
+            }
+
+            .friends-title {
+                font-size: 18px;
+            }
+
+            .add-friend-btn {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+
+            .create-post-actions {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .post-media-btns {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .post-btn {
+                width: 100%;
+            }
+        }

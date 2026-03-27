@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+{% block title %}{{ room.room_name }} - EduLink{% endblock %}
+{% block extra_css %}
+<style>
+/* ── Room Page Styles ── */
+.room-layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; height: calc(100vh - 80px); }
+.video-section { background: var(--bg-secondary); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; }
+.video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; flex: 1; min-height: 0; }
+.video-tile { background: #1a1a2e; border-radius: 12px; position: relative; min-height: 150px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.video-tile video { width: 100%; height: 100%; object-fit: cover; }
+.video-tile .user-label { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 6px; font-size: 13px; }
+.video-tile .no-video { color: white; font-size: 32px; }
+.video-controls { display: flex; gap: 12px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+.video-btn { padding: 10px 20px; border-radius: 50px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; }
+.btn-cam  { background: var(--primary); color: white; }
+.btn-mic  { background: var(--accent-3); color: white; }
+.btn-hang { background: var(--accent-2); color: white; }
+.btn-screen { background: var(--accent-4); color: white; }
+
+/* ── Chat Section ── */
+.chat-section { background: var(--bg-secondary); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
+.chat-header { padding: 16px 20px; border-bottom: 1px solid var(--border-color); font-weight: 600; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.chat-msg { display: flex; flex-direction: column; max-width: 85%; }
+.chat-msg.mine { align-self: flex-end; align-items: flex-end; }
+.chat-msg .msg-author { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+.chat-msg .msg-bubble { background: var(--bg-primary); border-radius: 12px; padding: 8px 12px; font-size: 14px; line-height: 1.4; }
+.chat-msg.mine .msg-bubble { background: var(--primary); color: white; }
+.chat-msg .msg-time { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.chat-input-area { padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; gap: 8px; }
+.chat-input { flex: 1; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 50px; background: var(--bg-primary); color: var(--text-primary); font-size: 14px; outline: none; }
+.chat-send-btn { background: var(--primary); color: white; border: none; border-radius: 50%; width: 38px; height: 38px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+.room-top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.room-title { font-size: 20px; font-weight: 700; }
+.room-badge { background: var(--primary); color: white; padding: 4px 12px; border-radius: 50px; font-size: 12px; }
+.member-dots { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.member-dot { width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; position: relative; cursor: default; }
+
+/* Admin controls */
+.admin-panel { padding: 12px 16px; border-top: 1px solid var(--border-color); }
+.members-list-admin { display: flex; flex-direction: column; gap: 6px; max-height: 120px; overflow-y: auto; }
+.member-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+.kick-btn { background: var(--accent-2); color: white; border: none; border-radius: 4px; padding: 2px 8px; font-size: 11px; cursor: pointer; }
+
+@media (max-width: 768px) { .room-layout { grid-template-columns: 1fr; } .chat-section { height: 400px; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="main-content" style="padding: 16px;">
+    <!-- Top Bar -->
+    <div class="room-top-bar">
+        <div>
+            <div class="room-title">{{ room.room_name }}</div>
+            <span style="color:var(--text-muted);font-size:13px;">{{ room.subject }} • Room #{{ room.room_id }}</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <span class="room-badge"><i class="fas fa-circle" style="font-size:8px;"></i> Live</span>
+            <a href="{{ url_for('classroom.classroom') }}" style="color:var(--text-muted);text-decoration:none;"><i class="fas fa-arrow-left"></i> Back</a>
+        </div>
+    </div>
+
+    <!-- Members -->
+    <div class="member-dots" id="memberDots">
+        {% for m in members %}
+        <div class="member-dot" title="{{ m.name }}">{{ m.name[0]|upper }}</div>
+        {% endfor %}
+        <!-- Current user (always shown) -->
+        <div class="member-dot" style="background:var(--accent-3);" title="{{ user.profilename }}">{{ user.profilename[0]|upper if user.profilename else 'Y' }}</div>
+    </div>
+
+    <div class="room-layout">
+        <!-- Video Section -->
+        <div class="video-section">
+            <h3 style="margin-bottom:12px;font-size:15px;">📹 Video Chat</h3>
+            <div class="video-grid" id="videoGrid">
+                <!-- Local video tile -->
+                <div class="video-tile" id="localTile">
+                    <video id="localVideo" autoplay muted playsinline></video>
+                    <div class="user-label">{{ user.profilename }} (You)</div>
+                </div>
+            </div>
+            <div class="video-controls">
+                <button class="video-btn btn-cam"    id="camBtn"><i class="fas fa-video"></i> Cam On</button>
+                <button class="video-btn btn-mic"    id="micBtn"><i class="fas fa-microphone"></i> Mic On</button>
+                <button class="video-btn btn-hang"   id="hangupBtn"><i class="fas fa-phone-slash"></i> Leave</button>
+            </div>
+        </div>
+
+        <!-- Chat Section -->
+        <div class="chat-section">
+            <div class="chat-header">
+                <i class="fas fa-comments"></i> Room Chat
+                <span style="font-size:12px;color:var(--text-muted);font-weight:400;display:block;">Only members in this room can see messages</span>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                {% for msg in messages %}
+                <div class="chat-msg {% if msg.user_id == user.user_id %}mine{% endif %}">
+                    {% if msg.user_id != user.user_id %}<div class="msg-author">{{ msg.username }}</div>{% endif %}
+                    <div class="msg-bubble">{{ msg.message }}</div>
+                    <div class="msg-time">{{ msg.time }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="chat-input-area">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." maxlength="500">
+                <button class="chat-send-btn" id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+            </div>
+
+            <!-- Admin Panel (sirf admin ke liye) -->
+            {% if is_admin %}
+            <div class="admin-panel">
+                <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">⚙️ Admin Controls</div>
+                <div class="members-list-admin" id="adminMembersList">
+                    {% for m in members %}
+                    <div class="member-row">
+                        <span>{{ m.name }}</span>
+                        <button class="kick-btn" onclick="removeMember({{ m.user_id }}, '{{ m.name }}')">
+                            <i class="fas fa-times"></i> Remove
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Flask-SocketIO client -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+// ============================================================
+// Room.html — SocketIO Chat + WebRTC Video
+// ============================================================
+
+const ROOM_ID    = {{ room.room_id }};
+const MY_USER_ID = {{ user.user_id }};
+const MY_NAME    = "{{ user.profilename }}";
+
+// ── Socket.IO Connect ────────────────────────────────────────
+const socket = io();
+
+// Join classroom room on connect
+socket.emit('join_classroom_room', { room_id: ROOM_ID });
+
+// New message received
+socket.on('classroom_new_message', (data) => {
+    appendMessage(data.username, data.message, data.time, data.user_id === MY_USER_ID);
+});
+
+// User joined/left notifications
+socket.on('classroom_user_joined', (data) => {
+    appendSystemMessage(data.message);
+});
+socket.on('classroom_user_left', (data) => {
+    appendSystemMessage(data.message);
+});
+
+// ── Chat Functions ───────────────────────────────────────────
+const chatMessages = document.getElementById('chatMessages');
+const chatInput    = document.getElementById('chatInput');
+const sendBtn      = document.getElementById('sendBtn');
+
+function appendMessage(username, message, time, isMe) {
+    const div = document.createElement('div');
+    div.className = `chat-msg ${isMe ? 'mine' : ''}`;
+    div.innerHTML = `
+        ${!isMe ? `<div class="msg-author">${username}</div>` : ''}
+        <div class="msg-bubble">${escapeHtml(message)}</div>
+        <div class="msg-time">${time}</div>
+    `;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function appendSystemMessage(text) {
+    const div = document.createElement('div');
+    div.style.cssText = 'text-align:center;font-size:12px;color:var(--text-muted);padding:4px;';
+    div.textContent = text;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(str));
+    return d.innerHTML;
+}
+
+function sendMessage() {
+    const msg = chatInput.value.trim();
+    if (!msg) return;
+    socket.emit('classroom_send_message', { room_id: ROOM_ID, message: msg });
+    chatInput.value = '';
+}
+
+sendBtn.addEventListener('click', sendMessage);
+chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+// Scroll to bottom on load
+chatMessages.scrollTop = chatMessages.scrollHeight;
+
+
+// ── WebRTC Mesh Video Chat ───────────────────────────────────
+// Har peer doosre se seedha connect karta hai (no server)
+// Max 4 log ache se kaam karta hai
+
+let localStream   = null;
+let peers         = {};   // { socket_id: RTCPeerConnection }
+let camOn         = false;
+let micOn         = false;
+
+const localVideo  = document.getElementById('localVideo');
+const videoGrid   = document.getElementById('videoGrid');
+const camBtn      = document.getElementById('camBtn');
+const micBtn      = document.getElementById('micBtn');
+const hangupBtn   = document.getElementById('hangupBtn');
+
+// ICE servers — free STUN servers (LAN pe inke bina bhi kaam karta hai)
+const iceConfig = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+};
+
+// Cam toggle
+camBtn.addEventListener('click', async () => {
+    if (!localStream) {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: micOn });
+            localVideo.srcObject = localStream;
+            camOn = true;
+            camBtn.innerHTML = '<i class="fas fa-video-slash"></i> Cam Off';
+            // Tell other peers we're ready
+            socket.emit('webrtc_user_ready', { room_id: ROOM_ID });
+        } catch (err) {
+            alert('Could not access camera: ' + err.message);
+        }
+    } else {
+        // Toggle camera track
+        localStream.getVideoTracks().forEach(t => {
+            t.enabled = !t.enabled;
+            camOn = t.enabled;
+        });
+        camBtn.innerHTML = camOn ? '<i class="fas fa-video-slash"></i> Cam Off' : '<i class="fas fa-video"></i> Cam On';
+    }
+});
+
+// Mic toggle
+micBtn.addEventListener('click', async () => {
+    if (!localStream) {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+            micOn = true;
+            micBtn.innerHTML = '<i class="fas fa-microphone-slash"></i> Mic Off';
+            socket.emit('webrtc_user_ready', { room_id: ROOM_ID });
+        } catch (err) {
+            alert('Could not access microphone: ' + err.message);
+        }
+    } else {
+        localStream.getAudioTracks().forEach(t => {
+            t.enabled = !t.enabled;
+            micOn = t.enabled;
+        });
+        micBtn.innerHTML = micOn ? '<i class="fas fa-microphone-slash"></i> Mic Off' : '<i class="fas fa-microphone"></i> Mic On';
+    }
+});
+
+// Hangup
+hangupBtn.addEventListener('click', () => {
+    socket.emit('leave_classroom_room', { room_id: ROOM_ID });
+    if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+    }
+    Object.keys(peers).forEach(sid => {
+        peers[sid].close();
+        const tile = document.getElementById('tile_' + sid);
+        if (tile) tile.remove();
+    });
+    peers = {};
+    window.location.href = '/classroom';
+});
+
+// ── WebRTC Signaling ──────────────────────────────────────────
+
+// Naya peer aaya — unhein offer bhejo
+socket.on('webrtc_new_peer', async (data) => {
+    const { sid, username } = data;
+    const pc = createPeerConnection(sid, username);
+    peers[sid] = pc;
+
+    if (localStream) {
+        localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    }
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    socket.emit('webrtc_offer', { room_id: ROOM_ID, target_sid: sid, offer });
+});
+
+// Offer mila — answer bhejo
+socket.on('webrtc_offer', async (data) => {
+    const { from_sid, offer } = data;
+    if (!peers[from_sid]) {
+        peers[from_sid] = createPeerConnection(from_sid, 'Peer');
+    }
+    const pc = peers[from_sid];
+
+    if (localStream) {
+        localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    }
+
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    socket.emit('webrtc_answer', { target_sid: from_sid, answer });
+});
+
+// Answer mila
+socket.on('webrtc_answer', async (data) => {
+    const { from_sid, answer } = data;
+    if (peers[from_sid]) {
+        await peers[from_sid].setRemoteDescription(new RTCSessionDescription(answer));
+    }
+});
+
+// ICE candidate mila
+socket.on('webrtc_ice_candidate', async (data) => {
+    const { from_sid, candidate } = data;
+    if (peers[from_sid] && candidate) {
+        await peers[from_sid].addIceCandidate(new RTCIceCandidate(candidate));
+    }
+});
+
+// ── Helper: Create PeerConnection ───────────────────────────
+function createPeerConnection(sid, username) {
+    const pc = new RTCPeerConnection(iceConfig);
+
+    // ICE candidate mila — doosre ko bhejo
+    pc.onicecandidate = (event) => {
+        if (event.candidate) {
+            socket.emit('webrtc_ice_candidate', { target_sid: sid, candidate: event.candidate });
+        }
+    };
+
+    // Remote track aaya — video tile banao
+    pc.ontrack = (event) => {
+        let tile = document.getElementById('tile_' + sid);
+        if (!tile) {
+            tile = document.createElement('div');
+            tile.className = 'video-tile';
+            tile.id = 'tile_' + sid;
+            tile.innerHTML = `
+                <video autoplay playsinline></video>
+                <div class="user-label">${username}</div>
+            `;
+            videoGrid.appendChild(tile);
+        }
+        tile.querySelector('video').srcObject = event.streams[0];
+    };
+
+    // Connection closed
+    pc.onconnectionstatechange = () => {
+        if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+            const tile = document.getElementById('tile_' + sid);
+            if (tile) tile.remove();
+            delete peers[sid];
+        }
+    };
+
+    return pc;
+}
+
+// ── Admin: Remove Member ─────────────────────────────────────
+function removeMember(memberId, memberName) {
+    if (!confirm(`Remove ${memberName} from this room?`)) return;
+    const fd = new FormData();
+    fd.append('room_id', ROOM_ID);
+    fd.append('member_id', memberId);
+    fetch('/api/remove-room-member', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) alert(memberName + ' removed!');
+        });
+}
+</script>
+{% endblock %}

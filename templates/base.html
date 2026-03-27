@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Smart Study Management - EduLink">
+    <title>{% block title %}EduLink{% endblock %}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- html2canvas + jsPDF (notebook/export ke liye) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Page-specific CSS -->
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="focus-page">
+        <!-- Mobile Menu Button -->
+        <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="EduLink Logo" class="logo-img">
+                    <h1 class="logo-text">EduLink</h1>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard.dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard.dashboard' %}active{% endif %}">
+                    <i class="fas fa-chart-line"></i><span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('focus.focus') }}" class="nav-item {% if request.endpoint == 'focus.focus' %}active{% endif %}">
+                    <i class="fas fa-clock"></i><span>Focus</span>
+                </a>
+                <a href="{{ url_for('tasks.tasks') }}" class="nav-item {% if request.endpoint == 'tasks.tasks' %}active{% endif %}">
+                    <i class="fas fa-tasks"></i><span>Tasks</span>
+                </a>
+                <a href="{{ url_for('notebook.notebook') }}" class="nav-item {% if request.endpoint == 'notebook.notebook' %}active{% endif %}">
+                    <i class="fas fa-book"></i><span>Notebook</span>
+                </a>
+                <a href="{{ url_for('classroom.classroom') }}" class="nav-item {% if request.endpoint in ['classroom.classroom','classroom.room'] %}active{% endif %}">
+                    <i class="fas fa-users"></i><span>ClassRoom</span>
+                </a>
+                <a href="{{ url_for('community.community') }}" class="nav-item {% if request.endpoint == 'community.community' %}active{% endif %}">
+                    <i class="fas fa-user-friends"></i><span>Community</span>
+                </a>
+                <a href="{{ url_for('profile.profile') }}" class="nav-item {% if request.endpoint == 'profile.profile' %}active{% endif %}">
+                    <i class="fas fa-user"></i><span>Profile</span>
+                </a>
+            </nav>
+
+            <!-- Sidebar Footer — Profile + Theme + Logout -->
+            <div class="sidebar-footer">
+                <div class="profile-card">
+                    <div class="profile-avatar" id="profileAvatar">
+                        {{ user.profilename[0]|upper if user.profilename else 'U' }}
+                    </div>
+                    <div class="profile-info">
+                        <div class="profile-name" id="profileName">{{ user.profilename or 'User' }}</div>
+                        <div class="profile-email" id="profileEmail">{{ user.email or '' }}</div>
+                    </div>
+                </div>
+
+                <div class="theme-toggle">
+                    <button class="theme-btn active" id="lightThemeBtn"><i class="fas fa-sun"></i></button>
+                    <button class="theme-btn" id="darkThemeBtn"><i class="fas fa-moon"></i></button>
+                </div>
+
+                <a href="{{ url_for('auth.logout') }}" class="theme-toggle" style="margin-top:8px;background:var(--accent-2);color:white;text-decoration:none;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;">
+                    <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Mobile Bottom Navigation -->
+        <nav class="mobile-nav">
+            <div class="mobile-nav-items">
+                <a href="{{ url_for('dashboard.dashboard') }}" class="mobile-nav-item"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
+                <a href="{{ url_for('focus.focus') }}" class="mobile-nav-item"><i class="fas fa-clock"></i><span>Focus</span></a>
+                <a href="{{ url_for('tasks.tasks') }}" class="mobile-nav-item"><i class="fas fa-tasks"></i><span>Tasks</span></a>
+                <a href="{{ url_for('notebook.notebook') }}" class="mobile-nav-item"><i class="fas fa-book"></i><span>Notes</span></a>
+                <a href="{{ url_for('profile.profile') }}" class="mobile-nav-item"><i class="fas fa-user"></i><span>Profile</span></a>
+            </div>
+        </nav>
+
+        <!-- Page Content goes here -->
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Common JS (theme, etc.) -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
