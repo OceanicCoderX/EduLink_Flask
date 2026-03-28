@@ -14,17 +14,49 @@
         <!-- LEFT SECTION -->
         <div class="left-section">
             <div class="stats-grid">
-                <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-door-open"></i></div><div class="stat-value" id="totalCreated">0</div><div class="stat-label">Rooms Created</div></div>
-                <div class="stat-card"><div class="stat-icon green"><i class="fas fa-sign-in-alt"></i></div><div class="stat-value" id="totalJoined">0</div><div class="stat-label">Rooms Joined</div></div>
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="fas fa-door-open"></i></div>
+                    <div class="stat-value" id="totalCreated">0</div>
+                    <div class="stat-label">Rooms Created</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fas fa-sign-in-alt"></i></div>
+                    <div class="stat-value" id="totalJoined">0</div>
+                    <div class="stat-label">Rooms Joined</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i class="fas fa-clock"></i></div>
+                    <div class="stat-value" id="totalHours">0h</div>
+                    <div class="stat-label">Hours Spent</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i class="fas fa-star"></i></div>
+                    <div class="stat-value" id="totalHours">0h</div>
+                    <div class="stat-label">Total Stack</div>
+                </div>
             </div>
 
             <!-- My Created Rooms -->
             <div class="rooms-section">
                 <div class="section-header">
-                    <h2 class="section-title"><i class="fas fa-door-open"></i> My Created Rooms</h2>
+                    <h2 class="section-title">
+                        <i class="fas fa-door-open"></i>
+                        My Created Rooms
+                    </h2>
+                    <div class="room-tabs">
+                        <button class="room-tab active" data-tab="active">Active</button>
+                        <button class="room-tab" data-tab="scheduled">Scheduled</button>
+                        <button class="room-tab" data-tab="past">Past</button>
+                    </div>
                 </div>
+
                 <div class="rooms-list" id="myRoomsList">
-                    <div class="empty-state"><div class="empty-icon"><i class="fas fa-door-closed"></i></div><div class="empty-text">No rooms created yet</div></div>
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-door-closed"></i>
+                        </div>
+                        <div class="empty-text">No rooms created yet. Click "Create Room" to start!</div>
+                    </div>
                 </div>
             </div>
 
@@ -49,14 +81,36 @@
                 </button>
             </div>
 
-            <!-- Join by Room ID -->
-            <div class="create-room-card" style="margin-top:16px;">
-                <h3>Join a Room</h3>
-                <input type="number" id="joinRoomIdInput" class="form-input" placeholder="Enter Room ID" style="margin-bottom:10px;">
-                <button class="create-room-btn" id="joinRoomBtn" style="background:var(--accent-3);">
-                    <i class="fas fa-sign-in-alt"></i> Join Room
-                </button>
-            </div>
+            <!-- Invitations Panel -->
+                    <div class="invitations-panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">
+                                <i class="fas fa-envelope"></i>
+                                Invitations
+                                <span class="notification-badge" id="inviteCount">0</span>
+                            </h3>
+                        </div>
+
+                        <div class="invitations-list" id="invitationsList">
+                            <div class="empty-state">
+                                <div class="empty-icon">
+                                    <i class="fas fa-inbox"></i>
+                                </div>
+                                <div class="empty-text">No pending invitations</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Invite Links Panel -->
+                    <div class="invite-links-panel">
+                        <div class="panel-header"><h3 class="panel-title"><i class="fas fa-link"></i> Invite Links </h3></div>
+                        <div id="inviteLinksList">
+                            <div class="empty-state">
+                                <div class="empty-text" style="font-size: 12px; padding: 20px 0;">Create a room to generate invite links</div>
+                            </div>
+                        </div>
+                    </div>
+            
         </div>
     </div>
 </main>
@@ -74,21 +128,45 @@
                     <label class="form-label">Room Name <span class="required">*</span></label>
                     <input type="text" class="form-input" id="roomName" placeholder="e.g., Physics Study Group" required>
                 </div>
+
                 <div class="form-group">
                     <label class="form-label">Subject</label>
-                    <select class="form-select" id="roomSubject">
-                        <option value="Mathematics">Mathematics</option>
-                        <option value="Physics">Physics</option>
-                        <option value="Chemistry">Chemistry</option>
-                        <option value="Biology">Biology</option>
-                        <option value="Programming">Programming</option>
-                        <option value="History">History</option>
-                        <option value="Other">Other</option>
-                    </select>
+                    <input type="text" class="form-input" id="roomSubject" placeholder="Subject Name reqyired" required>
                 </div>
+
                 <div class="form-group">
                     <label class="form-label">Description</label>
                     <textarea class="form-textarea" id="roomDescription" placeholder="Brief description..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="passwordProtected">
+                        <label for="passwordProtected">Password Protected</label>
+                    </div>
+                    <input type="password" class="form-input" id="roomPassword" placeholder="Enter room password" style="display: none;">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Schedule (Optional)</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <input type="date" class="form-input" id="roomDate">
+                        <input type="time" class="form-input" id="roomTime">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Privacy</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="publicRoom" name="privacy" value="public" checked>
+                            <label for="publicRoom">Public</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="privateRoom" name="privacy" value="private">
+                            <label for="privateRoom">Private (Invite Only)</label>
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>

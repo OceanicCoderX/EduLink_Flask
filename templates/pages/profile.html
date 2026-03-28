@@ -1,135 +1,482 @@
-{% extends "base.html" %}
-{% block title %}Profile - EduLink{% endblock %}
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
-{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Profile - EduLink{% endblock %} {%
+block extra_css %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/profile.css') }}"
+/>
+{% endblock %} {% block content %}
 <main class="main-content">
-    <!-- Profile Banner -->
-    <div class="profile-header-banner">
-        <img id="backgroundImage" class="profile-bg-image"
-             src="{{ url_for('static', filename='images/background/' + profile.user_id|string + '/' + profile.bg_pic) }}"
-             onerror="this.style.display='none'" alt="">
-        <div class="profile-bg-overlay"></div>
-        <button class="change-bg-btn" onclick="document.getElementById('coverPicInput').click()">
-            <i class="fas fa-camera"></i> Change Cover
+  <!-- Profile Banner -->
+  <div class="profile-header-banner">
+    <img
+      id="backgroundImage"
+      class="profile-bg-image"
+      src="{{ url_for('static', filename='images/background/' + profile.user_id|string + '/' + profile.bg_pic) }}"
+      onerror="this.style.display = 'none'"
+      alt=""
+    />
+    <div class="profile-bg-overlay"></div>
+    <button class="change-bg-btn" onclick="changeBackground()">
+      <i class="fas fa-camera"></i> Change Cover
+    </button>
+  </div>
+
+  <!-- Profile Info -->
+  <div class="profile-info-container" id="profileContent">
+    <!-- Main Profile Card -->
+    <div class="profile-main-card">
+      <div class="profile-top-section">
+        <!-- Avatar Section -->
+        <div class="profile-avatar-section">
+          <div class="profile-avatar-large" id="mainAvatar">
+            {{ profile.profilename[0]|upper }}
+          </div>
+          <button class="avatar-upload-btn" onclick="openAvatarModal()">
+            <i class="fas fa-camera"></i>
+          </button>
+        </div>
+
+        <!-- Profile Details -->
+        <div class="profile-details">
+          <div class="profile-name-section">
+            <h1 class="profile-name-large" id="displayName">
+              {{ profile.profilename }}
+            </h1>
+            <span class="verified-badge" title="Verified Account">
+              <i class="fas fa-check"></i>
+            </span>
+          </div>
+          <p class="profile-username" id="displayUsername">
+            @{{ profile.username }}
+          </p>
+          <p class="profile-bio" id="displayBio">{{ profile.bio }}</p>
+
+          <div class="profile-meta">
+            <div class="profile-meta-item">
+              <i class="fas fa-envelope"></i><span>{{ profile.email }}</span>
+            </div>
+            <div class="profile-meta-item">
+              <i class="fab fa-whatsapp"></i><span>{{ profile.whatsapp }}</span>
+            </div>
+            <div class="profile-meta-item">
+              <i class="fas fa-calendar-alt"></i
+              ><span>Joined {{ profile.created_date }}</span>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div
+            class="profile-stats"
+            style="display: flex; gap: 20px; margin-top: 16px"
+          >
+            <!-- Social Stats -->
+            <div class="social-stats">
+              <div
+                class="social-stat"
+                onclick="alert('Followers feature coming soon!')"
+              >
+                <div class="social-stat-value">1.2K</div>
+                <div class="social-stat-label">Followers</div>
+              </div>
+              <div
+                class="social-stat"
+                onclick="alert('Following feature coming soon!')"
+              >
+                <div class="social-stat-value">345</div>
+                <div class="social-stat-label">Following</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="profile-actions">
+        <button class="action-btn btn-primary" onclick="scrollToEdit()">
+          <i class="fas fa-edit"></i>
+          Edit Profile
         </button>
+        <button class="action-btn btn-secondary" onclick="shareProfile()">
+          <i class="fas fa-share-alt"></i>
+          Share Profile
+        </button>
+        <button class="action-btn btn-secondary" onclick="openExportModal()">
+          <i class="fas fa-download"></i>
+          Export Data
+        </button>
+      </div>
     </div>
 
-    <!-- Profile Info -->
-    <div class="profile-info-container">
-        <div class="profile-main-card">
-            <div class="profile-top-section">
-                <div class="profile-avatar-section">
-                    <div class="profile-avatar-large" id="mainAvatar">
-                        {{ profile.profilename[0]|upper }}
-                    </div>
-                    <button class="avatar-upload-btn" onclick="document.getElementById('profilePicInput').click()">
-                        <i class="fas fa-camera"></i>
-                    </button>
-                </div>
-                <div class="profile-details">
-                    <div class="profile-name-section">
-                        <h1 class="profile-name-large" id="displayName">{{ profile.profilename }}</h1>
-                    </div>
-                    <p class="profile-username" id="displayUsername">@{{ profile.username }}</p>
-                    <p class="profile-bio" id="displayBio">{{ profile.bio }}</p>
-
-                    <div class="profile-meta">
-                        <div class="profile-meta-item"><i class="fas fa-envelope"></i><span>{{ profile.email }}</span></div>
-                        <div class="profile-meta-item"><i class="fab fa-whatsapp"></i><span>{{ profile.whatsapp }}</span></div>
-                        <div class="profile-meta-item"><i class="fas fa-calendar-alt"></i><span>Joined {{ profile.created_date }}</span></div>
-                    </div>
-
-                    <!-- Stats -->
-                    <div class="profile-stats" style="display:flex;gap:20px;margin-top:16px;">
-                        <div style="text-align:center;">
-                            <div style="font-size:22px;font-weight:700;color:var(--primary);">{{ profile.total_stacks }}</div>
-                            <div style="font-size:12px;color:var(--text-muted);">Total Stacks</div>
-                        </div>
-                        <div style="text-align:center;">
-                            <div style="font-size:22px;font-weight:700;color:var(--accent-3);">{{ profile.total_sessions }}</div>
-                            <div style="font-size:12px;color:var(--text-muted);">Sessions</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Edit Button -->
-            <div style="margin-top:20px;">
-                <button class="action-btn edit-profile-btn" id="editProfileBtn" onclick="toggleEditForm()">
-                    <i class="fas fa-edit"></i> Edit Profile
-                </button>
-            </div>
+    <!-- Content Grid -->
+    <div class="content-grid">
+      <!-- Personal Information -->
+      <div class="content-card">
+        <div class="content-card-header">
+          <h2 class="content-card-title">
+            <i class="fas fa-user"></i>
+            Personal Information
+          </h2>
         </div>
+        <form class="info-form" id="personalInfoForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input
+                type="text"
+                class="form-input"
+                id="fullName"
+                value="{{ profile.profilename }}"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Username</label>
+              <input
+                type="text"
+                class="form-input"
+                id="username"
+                value="{{ profile.username }}"
+              />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <input
+                type="email"
+                class="form-input"
+                id="email"
+                value="{{ profile.email }}"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone Number</label>
+              <input
+                type="tel"
+                class="form-input"
+                id="phone"
+                value="+91 {{ profile.whatsapp }}"
+              />
+            </div>
+          </div>
 
-        <!-- Edit Form (hidden by default) -->
-        <div id="editProfileForm" style="display:none;margin-top:20px;background:var(--bg-secondary);border-radius:16px;padding:24px;">
-            <h3 style="margin-bottom:16px;">Edit Profile</h3>
-            <form id="profileForm" enctype="multipart/form-data">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-                    <div>
-                        <label style="font-size:13px;font-weight:600;">Profile Name</label>
-                        <input type="text" name="profilename" value="{{ profile.profilename }}" class="form-input" style="margin-top:4px;width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);">
-                    </div>
-                    <div>
-                        <label style="font-size:13px;font-weight:600;">Username</label>
-                        <input type="text" name="username" value="{{ profile.username }}" class="form-input" style="margin-top:4px;width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);">
-                    </div>
-                </div>
-                <div style="margin-bottom:16px;">
-                    <label style="font-size:13px;font-weight:600;">WhatsApp</label>
-                    <input type="tel" name="whatsapp" value="{{ profile.whatsapp }}" class="form-input" style="margin-top:4px;width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);">
-                </div>
-                <div style="margin-bottom:16px;">
-                    <label style="font-size:13px;font-weight:600;">Bio</label>
-                    <textarea name="bio" style="margin-top:4px;width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);resize:vertical;min-height:80px;">{{ profile.bio }}</textarea>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-                    <div>
-                        <label style="font-size:13px;font-weight:600;">Profile Picture</label>
-                        <input type="file" name="profilePicInput" id="profilePicInput" accept="image/*" style="margin-top:4px;width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);">
-                    </div>
-                    <div>
-                        <label style="font-size:13px;font-weight:600;">Cover Picture</label>
-                        <input type="file" name="coverPicInput" id="coverPicInput" accept="image/*" style="margin-top:4px;width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);">
-                    </div>
-                </div>
-                <div style="display:flex;gap:12px;">
-                    <button type="button" onclick="saveProfile()" style="background:var(--primary);color:white;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;font-weight:600;">
-                        <i class="fas fa-save"></i> Save Changes
-                    </button>
-                    <button type="button" onclick="toggleEditForm()" style="background:var(--bg-primary);border:1px solid var(--border-color);padding:10px 24px;border-radius:8px;cursor:pointer;color:var(--text-primary);">
-                        Cancel
-                    </button>
-                </div>
-            </form>
+          <div class="form-group">
+            <label class="form-label">Bio</label>
+            <textarea class="form-input" id="bio" maxlength="250">
+                {{ profile.bio }}
+            </textarea>
+            <small style="color: var(--text-muted)">
+              <span id="bioCharCount">67</span>/250 characters
+            </small>
+          </div>
+          <div class="form-group">
+            <label class="form-label">User ID (Cannot be changed)</label>
+            <input
+              type="text"
+              class="form-input"
+              value="{{ profile.user_id }}"
+              disabled
+            />
+          </div>
+          <div style="display: flex; gap: 12px; justify-content: flex-end">
+            <button
+              type="button"
+              class="action-btn btn-secondary"
+              onclick="cancelEdit()"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              onclick="saveProfile()"
+              class="action-btn btn-primary"
+            >
+              <i class="fas fa-save"></i>
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="content-card">
+        <div class="content-card-header">
+          <h2 class="content-card-title">
+            <i class="fas fa-history"></i>
+            Recent Activity
+          </h2>
+          <span
+            class="content-card-action"
+            onclick="alert('View all activity coming soon!')"
+          >
+            View All
+          </span>
         </div>
+        <div class="activity-list">
+          <div class="activity-item">
+            <div class="activity-icon pomodoro">
+              <i class="fas fa-clock"></i>
+            </div>
+            <div class="activity-content">
+              <div class="activity-title">Completed 50/10 Pomodoro session</div>
+              <div class="activity-time">2 hours ago</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-icon task">
+              <i class="fas fa-check"></i>
+            </div>
+            <div class="activity-content">
+              <div class="activity-title">Completed task "Study Chapter 5"</div>
+              <div class="activity-time">5 hours ago</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-icon note">
+              <i class="fas fa-book"></i>
+            </div>
+            <div class="activity-content">
+              <div class="activity-title">Created "Physics Notes"</div>
+              <div class="activity-time">Yesterday</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-icon achievement">
+              <i class="fas fa-trophy"></i>
+            </div>
+            <div class="activity-content">
+              <div class="activity-title">
+                Unlocked "7-Day Streak" achievement
+              </div>
+              <div class="activity-time">2 days ago</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-icon task">
+              <i class="fas fa-share"></i>
+            </div>
+            <div class="activity-content">
+              <div class="activity-title">Shared note with community</div>
+              <div class="activity-time">3 days ago</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <!-- Settings -->
+    <div class="content-card">
+      <div class="content-card-header">
+        <h2 class="content-card-title">
+          <i class="fas fa-cog"></i>
+          Settings & Preferences
+        </h2>
+      </div>
+
+      <div class="settings-group">
+        <h3 class="settings-group-title">Notifications</h3>
+        <div class="setting-item">
+          <span class="setting-label">Email Notifications</span>
+          <div class="toggle-switch active" onclick="toggleSetting(this)"></div>
+        </div>
+        <div class="setting-item">
+          <span class="setting-label">WhatsApp Reminders</span>
+          <div class="toggle-switch active" onclick="toggleSetting(this)"></div>
+        </div>
+        <div class="setting-item">
+          <span class="setting-label">Browser Notifications</span>
+          <div class="toggle-switch" onclick="toggleSetting(this)"></div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h3 class="settings-group-title">Privacy</h3>
+        <div class="setting-item">
+          <span class="setting-label">Public Profile</span>
+          <select class="form-input" style="width: auto">
+            <option>Public</option>
+            <option selected>Friends Only</option>
+            <option>Private</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <span class="setting-label">Show Activity Status</span>
+          <div class="toggle-switch active" onclick="toggleSetting(this)"></div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h3 class="settings-group-title">Account Actions</h3>
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <button class="action-btn btn-secondary" onclick="changePassword()">
+            <i class="fas fa-key"></i>
+            Change Password
+          </button>
+          <button class="action-btn btn-secondary" onclick="changePassword()">
+            <i class="fas fa-sign-out-alt"></i>
+            LogOut
+          </button>
+          <button
+            class="action-btn btn-secondary"
+            style="background: var(--accent-2); color: white"
+            onclick="
+              alert(
+                'Account deletion is permanent. Contact support to proceed.',
+              )
+            "
+          >
+            <i class="fas fa-trash"></i>
+            Delete Account
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </main>
-{% endblock %}
 
-{% block extra_js %}
+<!-- Avatar Selection Modal -->
+<div class="modal-overlay" id="avatarModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Change Avatar</h3>
+      <button class="modal-close" onclick="closeModal('avatarModal')">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom: 20px; color: var(--text-secondary)">
+        Choose from pre-defined avatars or upload your own image:
+      </p>
+
+      <!-- Upload Option -->
+      <div style="margin-bottom: 24px">
+        <button
+          class="action-btn btn-primary"
+          style="width: 100%"
+          onclick="document.getElementById('avatarUpload').click()"
+        >
+          <i class="fas fa-upload"></i>
+          Upload Custom Avatar
+        </button>
+        <input
+          type="file"
+          id="avatarUpload"
+          accept="image/*"
+          style="display: none"
+        />
+      </div>
+
+      <!-- Pre-defined Avatars -->
+      <p
+        style="
+          margin-bottom: 12px;
+          font-weight: 500;
+          color: var(--text-primary);
+        "
+      >
+        Or choose a pre-defined avatar:
+      </p>
+      <div class="avatar-grid">
+        <div
+          class="avatar-option"
+          style="background: linear-gradient(135deg, #667eea, #764ba2)"
+          onclick="selectAvatar(this, 'gradient1')"
+        ></div>
+        <div
+          class="avatar-option"
+          style="background: linear-gradient(135deg, #f093fb, #f5576c)"
+          onclick="selectAvatar(this, 'gradient2')"
+        ></div>
+        <div
+          class="avatar-option"
+          style="background: linear-gradient(135deg, #4facfe, #00f2fe)"
+          onclick="selectAvatar(this, 'gradient3')"
+        ></div>
+        <div
+          class="avatar-option"
+          style="background: linear-gradient(135deg, #43e97b, #38f9d7)"
+          onclick="selectAvatar(this, 'gradient4')"
+        ></div>
+        <div
+          class="avatar-option"
+          style="background: linear-gradient(135deg, #fa709a, #fee140)"
+          onclick="selectAvatar(this, 'gradient5')"
+        ></div>
+        <div
+          class="avatar-option"
+          style="background: linear-gradient(135deg, #30cfd0, #330867)"
+          onclick="selectAvatar(this, 'gradient6')"
+        ></div>
+        <div
+          class="avatar-option"
+          style="background: linear-gradient(135deg, #a8edea, #fed6e3)"
+          onclick="selectAvatar(this, 'gradient7')"
+        ></div>
+        <div
+          class="avatar-option"
+          style="background: linear-gradient(135deg, #ff9a9e, #fecfef)"
+          onclick="selectAvatar(this, 'gradient8')"
+        ></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-overlay" id="exportModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Export Profile Data</h3>
+      <button class="modal-close" onclick="closeModal('exportModal')">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <button class="action-btn btn-primary" onclick="exportAsImage()">
+          <i class="fas fa-image"></i>
+          Export as Image (PNG)
+        </button>
+        <button class="action-btn btn-secondary" onclick="exportAsPDF()">
+          <i class="fas fa-file-pdf"></i>
+          Export as PDF
+        </button>
+        <button class="action-btn btn-secondary" onclick="exportAsJSON()">
+          <i class="fas fa-file-code"></i>
+          Export Data (JSON)
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden File Inputs -->
+<input
+  type="file"
+  id="backgroundUpload"
+  accept="image/*"
+  style="display: none"
+/>
+
+{% endblock %} {% block extra_js %}
 <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
 <script>
-function toggleEditForm() {
-    const form = document.getElementById('editProfileForm');
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
-}
+  function toggleEditForm() {
+    const form = document.getElementById("editProfileForm");
+    form.style.display = form.style.display === "none" ? "block" : "none";
+  }
 
-function saveProfile() {
-    const form = document.getElementById('profileForm');
-    const fd   = new FormData(form);
+  function saveProfile() {
+    const form = document.getElementById("profileForm");
+    const fd = new FormData(form);
 
-    fetch('/api/update-profile', { method: 'POST', body: fd })
-        .then(r => r.json())
-        .then(d => {
-            if (d.success) {
-                alert('Profile updated!');
-                location.reload();
-            }
-        });
-}
+    fetch("/api/update-profile", { method: "POST", body: fd })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          alert("Profile updated!");
+          location.reload();
+        }
+      });
+  }
 </script>
 {% endblock %}

@@ -134,16 +134,6 @@
             box-shadow: 0 4px 12px rgba(94, 114, 228, 0.4);
         }
 
-        .edit-profile-btn {
-            background: linear-gradient(135deg, var(--primary), var(--accent-1));
-            color: white;
-            box-shadow: 0 4px 12px rgba(94, 114, 228, 0.3);
-        }
-
-        .edit-profile-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(94, 114, 228, 0.4);
-        }
 
         /* Profile Details */
         .profile-details {
