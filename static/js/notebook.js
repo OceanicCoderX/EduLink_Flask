@@ -3,22 +3,100 @@
         let currentNoteId = null;
         let currentCategory = 'all';
 
+        // helper functions for storage/back-end sync
+        function loadNotesFromLocal() {
+            const saved = localStorage.getItem('edulink_notes');
+            if (saved) {
+                notes = JSON.parse(saved);
+                renderNotesList();
+            }
+        }
+
+        function saveNotesToLocal() {
+            localStorage.setItem('edulink_notes', JSON.stringify(notes));
+        }
+
+        function fetchNotesFromServer() {
+            fetch('/api/notes')
+                .then(res => res.json())
+                .then(data => {
+                    notes = data.map(n => ({
+                        id: n.notes_id,
+                        title: n.notes_title || 'Untitled Note',
+                        content: n.notes_description || '',
+                        category: n.category || 'general',
+                        tags: n.tags ? n.tags.split(',').map(t=>t.trim()).filter(t=>t) : [],
+                        createdAt: n.created_date || new Date().toISOString(),
+                        updatedAt: n.created_date || new Date().toISOString()
+                    }));
+                    renderNotesList();
+                })
+                .catch(err => {
+                    console.error('server load failed, falling back to local', err);
+                    loadNotesFromLocal();
+                });
+        }
+
+        function saveNoteToServer(note) {
+            const form = new FormData();
+            const isUpdate = note.id && !String(note.id).startsWith('temp');
+            
+            if (isUpdate) form.append('notes_id', note.id);
+            form.append('notes_title', note.title);
+            form.append('notes_description', note.content);
+            form.append('category', note.category);
+            form.append('tags', note.tags.join(', '));
+
+            const endpoint = isUpdate ? '/api/update-note' : '/api/save-note';
+
+            return fetch(endpoint, { method: 'POST', body: form })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.notes_id) {
+                        const oldId = note.id;
+                        note.id = data.notes_id;
+                        // if we had a temporary id, update array and re-render selection
+                        if (String(oldId).startsWith('temp')) {
+                            renderNotesList();
+                            if (currentNoteId === oldId) {
+                                currentNoteId = note.id;
+                            }
+                        }
+                    }
+                    return data;
+                });
+        }
+
+        function deleteNoteFromServer(id) {
+            const form = new FormData();
+            form.append('notes_id', id);
+            fetch('/api/delete-note', { method: 'POST', body: form })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) console.warn('deleteNoteFromServer failed', data);
+                })
+                .catch(err => console.error('deleteNoteFromServer error', err));
+        }
+
         // Load saved data
         window.addEventListener('load', () => {
             // Load user profile
             const userData = JSON.parse(localStorage.getItem('edulink_user'));
             if (userData) {
-                document.getElementById('profileName').textContent = userData.fullName || 'Student';
-                document.getElementById('profileEmail').textContent = userData.email || 'student@edulink.com';
-                document.getElementById('profileAvatar').textContent = (userData.fullName || 'S')[0].toUpperCase();
+                if (document.getElementById('profileName')) document.getElementById('profileName').textContent = userData.fullName || 'Student';
+                if (document.getElementById('profileEmail')) document.getElementById('profileEmail').textContent = userData.email || 'student@edulink.com';
+                if (document.getElementById('profileAvatar')) document.getElementById('profileAvatar').textContent = (userData.fullName || 'S')[0].toUpperCase();
             }
 
-            // Load notes
-            const savedNotes = localStorage.getItem('edulink_notes');
-            if (savedNotes) {
-                notes = JSON.parse(savedNotes);
-                renderNotesList();
+            // fetch notes from server, fallback to local storage
+            fetchNotesFromServer();
+
+            // save button handler
+            const saveBtn = document.getElementById('saveNoteBtn');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', manualSaveNote);
             }
+            updateSaveBtnState();
         });
 
         // Mobile Sidebar Toggle
@@ -60,8 +138,9 @@
 
         // Create New Note
         function createNewNote() {
+            const tempId = 'temp' + Date.now();
             const newNote = {
-                id: Date.now(),
+                id: tempId, // temporary, replaced when server responds
                 title: 'Untitled Note',
                 content: '',
                 category: 'general',
@@ -71,9 +150,17 @@
             };
 
             notes.unshift(newNote);
-            saveNotes();
+            saveNotesToLocal();
             renderNotesList();
             selectNote(newNote.id);
+            markUnsaved();
+
+            // push to backend (server will return a real numeric id)
+            saveNoteToServer(newNote).then(() => {
+                // after server assigns id, we can consider it saved
+                unsavedChanges = false;
+                updateSaveBtnState();
+            });
         }
 
         document.getElementById('newNoteBtn').addEventListener('click', createNewNote);
@@ -143,49 +230,74 @@
             document.getElementById('emptyState').style.display = 'none';
             document.getElementById('editorContainer').style.display = 'flex';
 
-            document.getElementById('noteTitleInput').value = note.title;
-            document.getElementById('noteContent').value = note.content;
-            document.getElementById('categorySelect').value = note.category;
-            document.getElementById('tagsInput').value = note.tags.join(', ');
+            if (document.getElementById('noteTitleInput')) document.getElementById('noteTitleInput').value = note.title;
+            if (document.getElementById('noteContent')) document.getElementById('noteContent').value = note.content;
+            if (document.getElementById('categorySelect')) document.getElementById('categorySelect').value = note.category;
+            if (document.getElementById('tagsInput')) document.getElementById('tagsInput').value = note.tags.join(', ');
 
             updateWordCount();
             renderNotesList();
+
+            // reset save state
+            unsavedChanges = false;
+            document.getElementById('saveStatus').innerHTML = '<i class="fas fa-check-circle"></i><span>All changes saved</span>';
+            updateSaveBtnState();
         }
 
-        // Auto-save Note
-        let saveTimeout;
-        function autoSaveNote() {
-            clearTimeout(saveTimeout);
-            
+        // manual-save workflow
+        let unsavedChanges = false;
+        function updateSaveBtnState() {
+            const btn = document.getElementById('saveNoteBtn');
+            if (!btn) return;
+            btn.disabled = !unsavedChanges;
+        }
+
+        function markUnsaved() {
+            unsavedChanges = true;
             const saveStatus = document.getElementById('saveStatus');
+            saveStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i><span>Unsaved changes</span>';
+            updateSaveBtnState();
+        }
+
+        function manualSaveNote() {
+            if (!currentNoteId) return;
+            const note = notes.find(n => n.id === currentNoteId);
+            if (!note) return;
+
+            note.title = document.getElementById('noteTitleInput') ? document.getElementById('noteTitleInput').value || 'Untitled Note' : 'Untitled Note';
+            note.content = document.getElementById('noteContent') ? document.getElementById('noteContent').value : '';
+            note.category = document.getElementById('categorySelect') ? document.getElementById('categorySelect').value : 'general';
+            note.tags = document.getElementById('tagsInput') ? document.getElementById('tagsInput').value.split(',').map(t => t.trim()).filter(t => t) : [];
+            note.updatedAt = new Date().toISOString();
+
+            saveNotesToLocal();
+            renderNotesList();
+
+            const saveStatus = document.getElementById('saveStatus');
+            const saveBtn = document.getElementById('saveNoteBtn');
+            if (saveBtn) saveBtn.disabled = true;
             saveStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Saving...</span>';
 
-            saveTimeout = setTimeout(() => {
-                if (currentNoteId) {
-                    const note = notes.find(n => n.id === currentNoteId);
-                    if (note) {
-                        note.title = document.getElementById('noteTitleInput').value || 'Untitled Note';
-                        note.content = document.getElementById('noteContent').value;
-                        note.category = document.getElementById('categorySelect').value;
-                        note.tags = document.getElementById('tagsInput').value.split(',').map(t => t.trim()).filter(t => t);
-                        note.updatedAt = new Date().toISOString();
-                        
-                        saveNotes();
-                        renderNotesList();
-
-                        saveStatus.innerHTML = '<i class="fas fa-check-circle"></i><span>All changes saved</span>';
-                    }
-                }
-            }, 1000);
+            saveNoteToServer(note).then(() => {
+                saveStatus.innerHTML = '<i class="fas fa-check-circle"></i><span>All changes saved</span>';
+                unsavedChanges = false;
+                updateSaveBtnState();
+            }).catch(err => {
+                console.error('manualSaveNote error', err);
+                saveStatus.innerHTML = '<i class="fas fa-times-circle"></i><span>Save failed</span>';
+            });
         }
 
-        document.getElementById('noteTitleInput').addEventListener('input', autoSaveNote);
-        document.getElementById('noteContent').addEventListener('input', () => {
-            updateWordCount();
-            autoSaveNote();
-        });
-        document.getElementById('categorySelect').addEventListener('change', autoSaveNote);
-        document.getElementById('tagsInput').addEventListener('input', autoSaveNote);
+
+        if (document.getElementById('noteTitleInput')) document.getElementById('noteTitleInput').addEventListener('input', markUnsaved);
+        if (document.getElementById('noteContent')) {
+            document.getElementById('noteContent').addEventListener('input', () => {
+                updateWordCount();
+                markUnsaved();
+            });
+        }
+        if (document.getElementById('categorySelect')) document.getElementById('categorySelect').addEventListener('change', markUnsaved);
+        if (document.getElementById('tagsInput')) document.getElementById('tagsInput').addEventListener('input', markUnsaved);
 
         // Update Word Count
         function updateWordCount() {
@@ -197,9 +309,9 @@
             document.getElementById('charCount').textContent = `${chars} characters`;
         }
 
-        // Save Notes to LocalStorage
+        // legacy compatibility function (calls new local helper)
         function saveNotes() {
-            localStorage.setItem('edulink_notes', JSON.stringify(notes));
+            saveNotesToLocal();
         }
 
         // Category Filter
@@ -242,7 +354,8 @@
                     document.getElementById('editorContainer').style.display = 'none';
                 }
                 
-                saveNotes();
+                saveNotesToLocal();
+                deleteNoteFromServer(noteId);
                 renderNotesList();
             }
         }
@@ -258,6 +371,22 @@
         document.addEventListener('click', () => {
             document.getElementById('exportDropdown').style.display = 'none';
         });
+
+        // Save to Google Drive
+        document.getElementById('driveBtn').addEventListener('click', () => {
+            alert('Google Drive integration will be available soon!');
+        });
+
+        // AI Format
+        document.getElementById('aiFormatBtn').addEventListener('click', () => {
+            alert('AI formatting feature coming soon! This will structure your notes automatically.');
+        });
+
+        // Share Note
+        document.getElementById('shareNoteBtn').addEventListener('click', () => {
+            alert('Sharing feature coming soon!');
+        });
+
 
         // Export Note Function
         function exportNote(format) {
@@ -314,25 +443,13 @@
             URL.revokeObjectURL(url);
         }
 
-        // Save to Google Drive
-        document.getElementById('driveBtn').addEventListener('click', () => {
-            alert('Google Drive integration will be available soon!');
-        });
-
-        // AI Format
-        document.getElementById('aiFormatBtn').addEventListener('click', () => {
-            alert('AI formatting feature coming soon! This will structure your notes automatically.');
-        });
-
-        // Share Note
-        document.getElementById('shareNoteBtn').addEventListener('click', () => {
-            alert('Sharing feature coming soon!');
-        });
-
         // Settings
-        document.getElementById('settingsBtn').addEventListener('click', () => {
-            alert('Settings panel will be integrated soon!');
-        });
+        const settingsBtn = document.getElementById('settingsBtn');
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => {
+                alert('Settings panel will be integrated soon!');
+            });
+        }
 
         // Text Formatting
         function formatText(command) {
@@ -362,5 +479,5 @@
             textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
             textarea.focus();
             textarea.setSelectionRange(start, start + formattedText.length);
-            autoSaveNote();
+            markUnsaved();
         }
