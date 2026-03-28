@@ -53,27 +53,10 @@
             <div class="create-post-card">
                 <textarea class="create-post-input" id="createPostInput" placeholder="Share your thoughts, ask questions..."></textarea>
                 <div class="create-post-actions">
-                    <div class="post-media-btns">
-                        <select id="postSubjectSelect" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);">
-                            <option value="general">📚 General</option>
-                            <option value="physics">🔬 Physics</option>
-                            <option value="chemistry">🧪 Chemistry</option>
-                            <option value="math">📐 Math</option>
-                            <option value="biology">🧬 Biology</option>
-                        </select>
-                    </div>
                     <button class="post-btn" id="createPostBtn"><i class="fas fa-paper-plane"></i> Post</button>
                 </div>
             </div>
 
-            <!-- Feed Filters -->
-            <div class="feed-filters">
-                <button class="filter-btn active" data-filter="all">All Posts</button>
-                <button class="filter-btn" data-filter="physics">🔬 Physics</button>
-                <button class="filter-btn" data-filter="chemistry">🧪 Chemistry</button>
-                <button class="filter-btn" data-filter="math">📐 Math</button>
-                <button class="filter-btn" data-filter="biology">🧬 Biology</button>
-            </div>
 
             <!-- Feed Posts -->
             <div id="feedPosts"><div style="color:var(--text-muted);padding:20px;text-align:center;">Loading posts...</div></div>
@@ -124,13 +107,7 @@
                     {% else %}
                     <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Join a community group to chat</div>
                     {% endif %}
-                    <div class="subject-tabs">
-                        <span class="subj-tab active" data-subject="general">📚 General</span>
-                        <span class="subj-tab" data-subject="physics">🔬 Physics</span>
-                        <span class="subj-tab" data-subject="chemistry">🧪 Chemistry</span>
-                        <span class="subj-tab" data-subject="math">📐 Math</span>
-                        <span class="subj-tab" data-subject="biology">🧬 Biology</span>
-                    </div>
+                    
                     <!-- Admin controls (shown when admin of selected group) -->
                     <div id="adminGroupControls" style="display:none;margin-top:8px;">
                         <details>
