@@ -11,7 +11,11 @@ block extra_css %}
     <img
       id="backgroundImage"
       class="profile-bg-image"
-      src="{{ url_for('static', filename='images/background/' + profile.user_id|string + '/' + profile.bg_pic) }}"
+      {% if 'default' in profile.bg_pic %}
+        src="{{ url_for('static', filename='images/background/' + profile.bg_pic) }}"
+      {% else %}
+        src="{{ url_for('static', filename='images/background/' + profile.user_id|string + '/' + profile.bg_pic) }}"
+      {% endif %}
       onerror="this.style.display = 'none'"
       alt=""
     />
@@ -125,6 +129,7 @@ block extra_css %}
                 type="text"
                 class="form-input"
                 id="fullName"
+                name="profilename"
                 value="{{ profile.profilename }}"
               />
             </div>
@@ -134,6 +139,7 @@ block extra_css %}
                 type="text"
                 class="form-input"
                 id="username"
+                name="username"
                 value="{{ profile.username }}"
               />
             </div>
@@ -145,6 +151,7 @@ block extra_css %}
                 type="email"
                 class="form-input"
                 id="email"
+                name="email"
                 value="{{ profile.email }}"
               />
             </div>
@@ -154,16 +161,15 @@ block extra_css %}
                 type="tel"
                 class="form-input"
                 id="phone"
-                value="+91 {{ profile.whatsapp }}"
+                name="whatsapp"
+                value="{{ profile.whatsapp }}"
               />
             </div>
           </div>
 
           <div class="form-group">
             <label class="form-label">Bio</label>
-            <textarea class="form-input" id="bio" maxlength="250">
-                {{ profile.bio }}
-            </textarea>
+            <textarea class="form-input" id="bio" name="bio" maxlength="250">{{ profile.bio }}</textarea>
             <small style="color: var(--text-muted)">
               <span id="bioCharCount">67</span>/250 characters
             </small>
@@ -466,7 +472,7 @@ block extra_css %}
   }
 
   function saveProfile() {
-    const form = document.getElementById("profileForm");
+    const form = document.getElementById("personalInfoForm");
     const fd = new FormData(form);
 
     fetch("/api/update-profile", { method: "POST", body: fd })

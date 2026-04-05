@@ -1,0 +1,11 @@
+# Custom
+.venv/
+
+# Environment Variables
+.env
+.flaskenv
+
+# Python byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class

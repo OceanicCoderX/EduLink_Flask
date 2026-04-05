@@ -269,9 +269,10 @@
         function sendSessionToBackend() {
             const formData = new FormData();
             formData.append("task", currentTask);
-            formData.append("duration", totalFocusMinutes);
-            formData.append("sessions", sessionsCompleted);
-            formData.append("stacks", currentStreak);
+            // Send only the current session duration, not the historical total
+            formData.append("duration", Math.floor(focusTime / 60));
+            formData.append("sessions", 1);
+            formData.append("stacks", 1);
 
             fetch('/api/save-focus', {
                 method: 'POST',

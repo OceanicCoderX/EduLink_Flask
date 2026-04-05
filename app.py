@@ -42,4 +42,4 @@ import socket_events   # noqa: F401  — yeh file events handle karti hai
 # --- Run ---
 if __name__ == "__main__":
     print("EduLink running at http://127.0.0.1:5000")
-    socketio.run(app, debug=True, host="127.0.0.1", port=5000)
+    socketio.run(app, debug=True, host="127.0.0.1", port=5000, allow_unsafe_werkzeug=True)

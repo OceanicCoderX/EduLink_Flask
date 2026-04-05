@@ -31,11 +31,11 @@ def save_focus():
     Focus session DB mein save karo.
     Agar user ka existing record hai toh update, nahi toh insert.
     """
-    user_id         = session['user_id']
-    task_name       = request.form.get('task', 'Study')
-    sessions_count  = request.form.get('sessions', 1)
-    duration_minutes = request.form.get('duration', 10)
-    stacks_earned   = request.form.get('stacks', 1)
+    user_id          = session['user_id']
+    task_name        = request.form.get('task', 'Study')
+    sessions_count   = int(request.form.get('sessions', 1))
+    duration_minutes = float(request.form.get('duration', 10))
+    stacks_earned    = int(request.form.get('stacks', 1))
 
     mydb   = get_db_connection()
     cursor = mydb.cursor()
@@ -47,7 +47,7 @@ def save_focus():
     if existing:
         cursor.execute("""
             UPDATE focus
-            SET task_name=%s, duration_minutes=%s, sessions_count=%s, stacks_earned=%s
+            SET task_name=%s, duration_minutes=duration_minutes+%s, sessions_count=sessions_count+%s, stacks_earned=stacks_earned+%s
             WHERE user_id=%s ORDER BY session_date DESC LIMIT 1
         """, (task_name, duration_minutes, sessions_count, stacks_earned, user_id))
     else:
