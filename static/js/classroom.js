@@ -35,7 +35,7 @@ function loadMyRooms() {
         .then(rooms => {
             const el = document.getElementById('myRoomsList');
             const filtered = rooms.filter(r =>
-                currentTab === 'active' ? r.status === 'active' : r.status === 'closed'
+                currentTab === 'active' ? (r.status || 'active') === 'active' : r.status === 'closed'
             );
 
             if (filtered.length === 0) {
@@ -44,13 +44,17 @@ function loadMyRooms() {
                 return;
             }
 
-            el.innerHTML = filtered.map(r => `
-                <div class="room-card ${r.status === 'closed' ? 'closed-room' : ''}">
+            el.innerHTML = filtered.map(r => {
+                const roomStatus = r.status || 'active';
+                return `
+                <div class="room-card ${roomStatus === 'closed' ? 'closed-room' : ''}">
                     <div class="room-info">
                         <div class="room-name">
                             ${r.room_name}
                             ${r.has_password ? '<i class="fas fa-lock" style="font-size:12px;color:var(--accent-2);margin-left:4px;"></i>' : ''}
-                            ${r.status === 'closed' ? '<span style="font-size:11px;color:#f5494a;margin-left:6px;">[Closed]</span>' : '<span style="font-size:11px;color:#2dce89;margin-left:6px;">● Active</span>'}
+                            ${roomStatus === 'closed'
+                                ? '<span style="font-size:11px;color:#f5494a;margin-left:6px;">[Closed]</span>'
+                                : '<span style="font-size:11px;color:#2dce89;margin-left:6px;">● Active</span>'}
                         </div>
                         <div class="room-meta">
                             ${r.subject} · Created ${r.created_date}
@@ -63,20 +67,24 @@ function loadMyRooms() {
                         </div>
                     </div>
                     <div class="room-actions">
-                        ${r.status === 'active' ? `
-                            <a href="/room/${r.room_id}" class="room-btn enter-btn">
+                        ${roomStatus === 'active' ? `
+                            <a href="/room/${r.room_id}" class="room-btn btn-join">
                                 <i class="fas fa-sign-in-alt"></i> Enter
                             </a>
                         ` : ''}
-                        <button onclick="deleteRoom(${r.room_id})" class="room-btn delete-btn">
+                        <button onclick="deleteRoom(${r.room_id})" class="room-btn btn-delete">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
 
             // Render invite links for active rooms
-            renderInviteLinks(rooms.filter(r => r.status === 'active'));
+            renderInviteLinks(rooms.filter(r => (r.status || 'active') === 'active'));
+        })
+        .catch(err => {
+            console.error('get-my-rooms error:', err);
+            showToast('Could not load rooms — check console', 'error');
         });
 }
 
@@ -99,9 +107,10 @@ function loadJoinedRooms() {
                     <div class="room-info">
                         <div class="room-name">
                             ${r.room_name}
-                            ${r.status === 'closed'
-                                ? '<span style="font-size:11px;color:#f5494a;margin-left:6px;">[Closed by admin]</span>'
-                                : '<span style="font-size:11px;color:#2dce89;margin-left:6px;">● Active</span>'}
+                            ${r.status === 'active'
+                                ? '<span style="font-size:11px;color:#2dce89;margin-left:6px;">● Active</span>'
+                                : '<span style="font-size:11px;color:#f5494a;margin-left:6px;">[Closed by admin]</span>'}
+
                         </div>
                         <div class="room-meta">
                             ${r.subject} · Host: ${r.admin_name} · Joined ${r.join_date}
@@ -222,17 +231,17 @@ function initListeners() {
 }
 
 function openModal() {
-    document.getElementById('createRoomModal').style.display = 'flex';
+    document.getElementById('createRoomModal').classList.add('show');
 }
 
 function closeModal() {
-    document.getElementById('createRoomModal').style.display = 'none';
+    document.getElementById('createRoomModal').classList.remove('show');
     document.getElementById('createRoomForm').reset();
     document.getElementById('roomPassword').style.display = 'none';
 }
 
 function closePwdModal() {
-    document.getElementById('passwordModal').style.display = 'none';
+    document.getElementById('passwordModal').classList.remove('show');
     document.getElementById('joinPasswordInput').value = '';
     pendingJoinId = null;
 }
@@ -290,12 +299,13 @@ function attemptJoin(roomId, password) {
                 closePwdModal();
                 showToast('Joined! Entering room...', 'success');
                 setTimeout(() => { window.location.href = '/room/' + data.room_id; }, 600);
-            } else if (data.error === 'Incorrect password') {
+            } else if (data.error && data.error.includes('password')) {
                 // Show password modal
                 pendingJoinId = roomId;
-                document.getElementById('passwordModal').style.display = 'flex';
+                document.getElementById('passwordModal').classList.add('show');
                 document.getElementById('joinPasswordInput').focus();
                 if (password) showToast('Incorrect password, try again.', 'error');
+
             } else {
                 showToast(data.error || 'Could not join room', 'error');
             }
@@ -329,87 +339,16 @@ function deleteRoom(roomId) {
         });
 }
 
-// ── Inline styles for join-room card and closed-room ─────────
-
-const style = document.createElement('style');
-style.textContent = `
-    .join-room-card {
-        background: var(--bg-secondary);
-        border-radius: 12px;
-        padding: 16px 20px;
-        margin-bottom: 16px;
-        border: 1px solid var(--border-color);
-    }
-    .join-room-card h3 {
-        font-size: 15px;
-        font-weight: 600;
-        margin-bottom: 6px;
-        color: var(--text-primary);
-    }
-    .join-room-card p {
-        font-size: 13px;
-        color: var(--text-muted);
-        margin-bottom: 12px;
-    }
-    .join-input-row {
-        display: flex;
-        gap: 8px;
-    }
-    .join-id-input {
-        flex: 1;
-        padding: 10px 14px;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        background: var(--bg-primary);
-        color: var(--text-primary);
-        font-size: 14px;
-        outline: none;
-    }
-    .join-id-input:focus { border-color: var(--primary); }
-    .join-id-btn {
-        padding: 10px 18px;
-        background: var(--primary);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 14px;
-        white-space: nowrap;
-    }
-    .join-id-btn:hover { opacity: 0.85; }
-
-    .closed-room { opacity: 0.65; }
-
-    .link-item {
-        padding: 12px 16px;
-        border-bottom: 1px solid var(--border-color);
-    }
-    .link-item:last-child { border-bottom: none; }
-    .link-room-name {
-        font-weight: 600;
-        font-size: 14px;
-        color: var(--text-primary);
-        margin-bottom: 2px;
-    }
-    .link-btn {
-        padding: 6px 12px;
-        border: 1px solid var(--border-color);
-        border-radius: 6px;
-        background: var(--bg-primary);
-        color: var(--text-primary);
-        font-size: 12px;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        text-decoration: none;
-    }
-    .link-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
-
-    .stat-icon.orange { background: rgba(251,137,64,0.12); color:#fb8940; }
+// ── Inline styles for join-room card, closed-room, and link-btn tweaks ──
+// (main styles in classroom.css)
+const _style = document.createElement('style');
+_style.textContent = `
+    .closed-room { border-left-color: #6c757d !important; }
+    .closed-room .room-name { opacity: 0.7; }
+    .stat-icon.orange { background: linear-gradient(135deg,#fb8940,#f83600); color:#fff; }
 `;
-document.head.appendChild(style);
+document.head.appendChild(_style);
+
 
 
 // ── Toast helper (uses common.js if available, else inline) ───
