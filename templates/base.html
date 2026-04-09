@@ -75,40 +75,6 @@
 
             <!-- Sidebar Footer — Profile + Stacks + Theme + Logout -->
             <div class="sidebar-footer">
-                <!-- Profession Badge -->
-                {% if user.profession %}
-                <div class="sidebar-profession">
-                    {% set pclass = {
-                        'Student':      'badge-student',
-                        'Teacher':      'badge-teacher',
-                        'Individual':   'badge-individual',
-                        'Professional': 'badge-professional',
-                        'Other':        'badge-other'
-                    } %}
-                    {% set picon = {
-                        'Student':      '📚',
-                        'Teacher':      '🎓',
-                        'Individual':   '👤',
-                        'Professional': '💼',
-                        'Other':        '⭐'
-                    } %}
-                    <span class="profession-badge {{ pclass.get(user.profession, 'badge-other') }}">
-                        {{ picon.get(user.profession, '⭐') }} {{ user.profession }}
-                    </span>
-                </div>
-                {% endif %}
-
-                <!-- Stack + Streak Display -->
-                <div class="sidebar-stacks">
-                    <i class="fas fa-layer-group"></i>
-                    <span id="sidebarStackCount">{{ user.stacks or 0 }}</span>
-                    <span style="opacity:0.7;font-weight:400">Stacks</span>
-                </div>
-                <div class="sidebar-streak">
-                    <i class="fas fa-fire"></i>
-                    <span id="sidebarStreakCount">{{ user.streak or 0 }}</span>
-                    <span style="opacity:0.7;font-weight:400">Day Streak</span>
-                </div>
 
                 <div class="profile-card">
                     <div class="profile-avatar" id="profileAvatar"
