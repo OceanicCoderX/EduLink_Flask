@@ -16,9 +16,9 @@ from datetime import datetime
 
 @socketio.on('join_classroom_room')
 def handle_join_classroom_room(data):
-    room_id  = str(data.get('room_id'))
-    user_id  = session.get('user_id')
-    username = session.get('profilename', 'User')
+    room_id    = str(data.get('room_id'))
+    user_id    = session.get('user_id')
+    username   = data.get('username') or session.get('profilename', 'User')
     profession = session.get('profession', 'Student')
 
     join_room(f"classroom_{room_id}")
@@ -33,15 +33,30 @@ def handle_join_classroom_room(data):
 
 @socketio.on('leave_classroom_room')
 def handle_leave_classroom_room(data):
-    room_id    = str(data.get('room_id'))
-    username   = session.get('profilename', 'User')
+    room_id  = str(data.get('room_id'))
+    username = session.get('profilename', 'User')
+    user_id  = session.get('user_id')
 
     leave_room(f"classroom_{room_id}")
 
     emit('classroom_user_left', {
+        'user_id':  user_id,
         'username': username,
         'message':  f"{username} left the room"
     }, to=f"classroom_{room_id}")
+
+
+@socketio.on('close_classroom_room')
+def handle_close_classroom_room(data):
+    """Admin closes room — broadcast room_closed to all members so they get redirected."""
+    room_id  = str(data.get('room_id'))
+    username = session.get('profilename', 'Admin')
+
+    emit('room_closed', {
+        'message': f"Room closed by {username}"
+    }, to=f"classroom_{room_id}")
+
+    leave_room(f"classroom_{room_id}")
 
 
 @socketio.on('classroom_send_message')

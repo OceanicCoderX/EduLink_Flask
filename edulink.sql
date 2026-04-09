@@ -1,6 +1,6 @@
 -- ============================================================
 -- EduLink — Complete Database Schema
--- Version 2.0 (Merged: original + full migration)
+-- Version 2.1 (Added: classroom password/status/hours, room_members join_time)
 -- Generated: 2026-04-09
 -- Server: MariaDB 10.4.32 | PHP 8.1.25
 -- Import: phpMyAdmin → edulink database → SQL tab → Go
@@ -21,18 +21,21 @@ SET NAMES utf8mb4;
 -- ============================================================
 
 CREATE TABLE `classroom` (
-  `room_id`          int(11) NOT NULL,
+  `room_id`          int(11)      NOT NULL,
   `room_name`        varchar(30)  NOT NULL,
   `room_description` text         NOT NULL,
   `admin_id`         int(11)      NOT NULL,
   `created_date`     date         NOT NULL,
   `total_duration`   varchar(20)  NOT NULL DEFAULT '0h',
   `subject`          varchar(50)  NOT NULL DEFAULT 'General',
-  `room_notes`       mediumtext            DEFAULT NULL
+  `room_notes`       mediumtext            DEFAULT NULL,
+  `room_password`    varchar(100)          DEFAULT NULL,
+  `status`           enum('active','closed') NOT NULL DEFAULT 'active',
+  `total_minutes`    int(11)      NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-INSERT INTO `classroom` (`room_id`, `room_name`, `room_description`, `admin_id`, `created_date`, `total_duration`, `subject`, `room_notes`) VALUES
-(1, 'abc', 'hfhjfub 8i', 1, '2026-03-25', '0h', 'Physics', NULL);
+INSERT INTO `classroom` (`room_id`, `room_name`, `room_description`, `admin_id`, `created_date`, `total_duration`, `subject`, `room_notes`, `room_password`, `status`, `total_minutes`) VALUES
+(1, 'abc', 'hfhjfub 8i', 1, '2026-03-25', '0h', 'Physics', NULL, NULL, 'active', 0);
 
 -- ============================================================
 -- TABLE: classroom_messages
@@ -184,10 +187,11 @@ CREATE TABLE `post_likes` (
 -- ============================================================
 
 CREATE TABLE `room_members` (
-  `id`        int(11) NOT NULL,
-  `member_id` int(11) NOT NULL,
-  `room_id`   int(11) NOT NULL,
-  `join_date` date    NOT NULL
+  `id`        int(11)  NOT NULL,
+  `member_id` int(11)  NOT NULL,
+  `room_id`   int(11)  NOT NULL,
+  `join_date` date     NOT NULL,
+  `join_time` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ============================================================

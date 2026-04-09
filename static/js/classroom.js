@@ -1,540 +1,429 @@
-// Global Variables
-        let myRooms = JSON.parse(localStorage.getItem('edulink_my_rooms')) || [];
-        let joinedRooms = JSON.parse(localStorage.getItem('edulink_joined_rooms')) || [];
-        let invitations = JSON.parse(localStorage.getItem('edulink_invitations')) || [];
-        let currentUser = JSON.parse(localStorage.getItem('edulink_user')) || { fullName: 'Khushi', email: 'khushi@edulink.com' };
-        let currentRoomTab = 'active';
+// ============================================================
+// classroom.js — EduLink Classroom Page (DB-backed, no localStorage)
+// ============================================================
 
-        // DOM Elements
-        const sidebar = document.getElementById('sidebar');
-        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-        const createRoomModal = document.getElementById('createRoomModal');
-        const createRoomBtn = document.getElementById('createRoomBtn');
-        const closeModalBtn = document.getElementById('closeModalBtn');
-        const cancelCreateBtn = document.getElementById('cancelCreateBtn');
-        const saveRoomBtn = document.getElementById('saveRoomBtn');
-        const passwordProtectedCheckbox = document.getElementById('passwordProtected');
-        const roomPasswordInput = document.getElementById('roomPassword');
+let currentTab      = 'active';
+let pendingJoinId   = null;  // Room ID waiting for password confirm
 
-        // Mobile Sidebar Toggle
-        document.addEventListener('click', (e) => {
-            if (window.innerWidth <= 968) {
-                if (e.target.closest('.mobile-nav-item')) {
-                    sidebar.classList.remove('open');
-                }
-            }
-        });
+document.addEventListener('DOMContentLoaded', () => {
+    loadStats();
+    loadMyRooms();
+    loadJoinedRooms();
+    initListeners();
+});
 
+// ── Stats ─────────────────────────────────────────────────────
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeTheme();
-            updateCurrentDate();
-            loadUserProfile();
-            updateStats();
-            renderMyRooms();
-            renderJoinedRooms();
-            renderInvitations();
-            renderInviteLinks();
-            initializeEventListeners();
-        });
-
-        // Theme Toggle
-        const lightThemeBtn = document.getElementById('lightThemeBtn');
-        const darkThemeBtn = document.getElementById('darkThemeBtn');
-
-        lightThemeBtn.addEventListener('click', () => {
-            document.documentElement.setAttribute('data-theme', 'light');
-            localStorage.setItem('edulink_theme', 'light');
-            lightThemeBtn.classList.add('active');
-            darkThemeBtn.classList.remove('active');
-        });
-
-        darkThemeBtn.addEventListener('click', () => {
-            document.documentElement.setAttribute('data-theme', 'dark');
-            localStorage.setItem('edulink_theme', 'dark');
-            darkThemeBtn.classList.add('active');
-            lightThemeBtn.classList.remove('active');
-        });
-
-        // Load saved theme
-        const savedTheme = localStorage.getItem('edulink_theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        if (savedTheme === 'dark') {
-            darkThemeBtn.classList.add('active');
-            lightThemeBtn.classList.remove('active');
-        }
+function loadStats() {
+    fetch('/api/get-classroom-stats')
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById('totalCreated').textContent = d.rooms_created;
+            document.getElementById('totalJoined').textContent  = d.rooms_joined;
+            document.getElementById('totalHours').textContent   = d.hours_spent + 'h';
+            document.getElementById('totalStacks').textContent  = d.stacks;
+        })
+        .catch(() => {});
+}
 
 
+// ── My Rooms ──────────────────────────────────────────────────
 
-        function updateCurrentDate() {
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const currentDateEl = document.getElementById('currentDate');
-            if (currentDateEl) {
-                currentDateEl.textContent = new Date().toLocaleDateString('en-US', options);
-            }
-        }
+function loadMyRooms() {
+    fetch('/api/get-my-rooms')
+        .then(r => r.json())
+        .then(rooms => {
+            const el = document.getElementById('myRoomsList');
+            const filtered = rooms.filter(r =>
+                currentTab === 'active' ? r.status === 'active' : r.status === 'closed'
+            );
 
-        function loadUserProfile() {
-            document.getElementById('profileName').textContent = currentUser.fullName || 'Student';
-            document.getElementById('profileEmail').textContent = currentUser.email || 'student@edulink.com';
-            document.getElementById('profileAvatar').textContent = (currentUser.fullName || 'S')[0].toUpperCase();
-        }
-
-        
-
-        function initializeEventListeners() {
-            // Mobile Menu
-            mobileMenuBtn.addEventListener('click', () => {
-                sidebar.classList.toggle('open');
-            });
-
-            document.addEventListener('click', (e) => {
-                if (window.innerWidth <= 968) {
-                    if (!sidebar.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
-                        sidebar.classList.remove('open');
-                    }
-                }
-            });
-
-            // Modal Controls
-            createRoomBtn.addEventListener('click', openCreateRoomModal);
-            closeModalBtn.addEventListener('click', closeCreateRoomModal);
-            cancelCreateBtn.addEventListener('click', closeCreateRoomModal);
-            saveRoomBtn.addEventListener('click', createRoom);
-
-            // Password Toggle
-            passwordProtectedCheckbox.addEventListener('change', function() {
-                roomPasswordInput.style.display = this.checked ? 'block' : 'none';
-                if (!this.checked) roomPasswordInput.value = '';
-            });
-
-            // Room Tabs
-            document.querySelectorAll('.room-tab').forEach(tab => {
-                tab.addEventListener('click', function() {
-                    document.querySelectorAll('.room-tab').forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-                    currentRoomTab = this.dataset.tab;
-                    renderMyRooms();
-                });
-            });
-
-            // Settings
-            document.getElementById('settingsBtn').addEventListener('click', () => {
-                alert('Settings will be available soon!');
-            });
-        }
-
-        function openCreateRoomModal() {
-            createRoomModal.classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeCreateRoomModal() {
-            createRoomModal.classList.remove('show');
-            document.body.style.overflow = 'auto';
-            document.getElementById('createRoomForm').reset();
-            roomPasswordInput.style.display = 'none';
-        }
-
-        function generateRoomCode() {
-            return Math.random().toString(36).substring(2, 8).toUpperCase();
-        }
-
-        function createRoom() {
-            const name = document.getElementById('roomName').value.trim();
-            const topic = document.getElementById('roomTopic').value.trim();
-            const subject = document.getElementById('roomSubject').value;
-            const description = document.getElementById('roomDescription').value.trim();
-            const isPasswordProtected = passwordProtectedCheckbox.checked;
-            const password = isPasswordProtected ? roomPasswordInput.value : null;
-            const date = document.getElementById('roomDate').value;
-            const time = document.getElementById('roomTime').value;
-            const isPublic = document.getElementById('publicRoom').checked;
-
-            if (!name || !topic) {
-                alert('Please fill in all required fields!');
+            if (filtered.length === 0) {
+                el.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-door-closed"></i></div><div class="empty-text">No ${currentTab} rooms</div></div>`;
+                renderInviteLinks([]);
                 return;
             }
 
-            if (isPasswordProtected && !password) {
-                alert('Please enter a password!');
-                return;
-            }
-
-            const room = {
-                id: 'room_' + Date.now(),
-                name,
-                topic,
-                subject,
-                description,
-                host: currentUser.fullName,
-                hostId: 'user_' + currentUser.fullName.toLowerCase(),
-                password,
-                isPasswordProtected,
-                isPublic,
-                participants: [currentUser.fullName],
-                participantCount: 1,
-                status: date && time ? 'scheduled' : 'active',
-                scheduledDate: date || null,
-                scheduledTime: time || null,
-                createdAt: new Date().toISOString(),
-                roomCode: generateRoomCode()
-            };
-
-            myRooms.push(room);
-            saveData();
-            renderMyRooms();
-            renderInviteLinks();
-            updateStats();
-            closeCreateRoomModal();
-            showNotification('Room created successfully!');
-        }
-
-        function updateStats() {
-            const totalCreated = myRooms.length;
-            const totalJoined = joinedRooms.length;
-            const activeNow = myRooms.filter(r => r.status === 'active').length + 
-                             joinedRooms.filter(r => r.status === 'active').length;
-            
-            // Calculate total hours (placeholder - would need tracking)
-            const totalHours = Math.floor(Math.random() * 100); // Placeholder
-
-            document.getElementById('totalCreated').textContent = totalCreated;
-            document.getElementById('totalJoined').textContent = totalJoined;
-            document.getElementById('activeNow').textContent = activeNow;
-            document.getElementById('totalHours').textContent = totalHours + 'h';
-        }
-
-        function renderMyRooms() {
-            const container = document.getElementById('myRoomsList');
-            let filteredRooms = myRooms;
-
-            if (currentRoomTab === 'active') {
-                filteredRooms = myRooms.filter(r => r.status === 'active');
-            } else if (currentRoomTab === 'scheduled') {
-                filteredRooms = myRooms.filter(r => r.status === 'scheduled');
-            } else if (currentRoomTab === 'past') {
-                filteredRooms = myRooms.filter(r => r.status === 'ended');
-            }
-
-            if (filteredRooms.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon"><i class="fas fa-door-closed"></i></div>
-                        <div class="empty-text">No ${currentRoomTab} rooms</div>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = filteredRooms.map(room => `
-                <div class="room-card ${room.status}">
-                    <div class="room-header">
-                        <div class="room-info">
-                            <div class="room-name">
-                                ${room.name} ${room.isPasswordProtected ? '<i class="fas fa-lock" style="font-size: 14px; color: var(--accent-4);"></i>' : ''}
-                            </div>
-                            <div class="room-topic">${room.topic}</div>
-                            <div class="room-meta">
-                                <span class="room-badge">
-                                    <i class="fas fa-users"></i> ${room.participantCount}
-                                </span>
-                                <span class="room-badge">
-                                    <i class="fas fa-book"></i> ${room.subject}
-                                </span>
-                                <span class="status-badge status-${room.status}">
-                                    ${room.status === 'active' ? '🟢' : room.status === 'scheduled' ? '🟡' : '⚪'} ${room.status}
-                                </span>
-                                ${room.scheduledDate ? `
-                                    <span class="room-badge">
-                                        <i class="fas fa-calendar"></i> ${room.scheduledDate} ${room.scheduledTime}
-                                    </span>
-                                ` : ''}
-                            </div>
+            el.innerHTML = filtered.map(r => `
+                <div class="room-card ${r.status === 'closed' ? 'closed-room' : ''}">
+                    <div class="room-info">
+                        <div class="room-name">
+                            ${r.room_name}
+                            ${r.has_password ? '<i class="fas fa-lock" style="font-size:12px;color:var(--accent-2);margin-left:4px;"></i>' : ''}
+                            ${r.status === 'closed' ? '<span style="font-size:11px;color:#f5494a;margin-left:6px;">[Closed]</span>' : '<span style="font-size:11px;color:#2dce89;margin-left:6px;">● Active</span>'}
+                        </div>
+                        <div class="room-meta">
+                            ${r.subject} · Created ${r.created_date}
+                            · <i class="fas fa-users"></i> ${r.member_count} members
+                            · <i class="fas fa-clock"></i> ${Math.round((r.total_minutes || 0) / 60 * 10) / 10}h
+                        </div>
+                        <div class="room-desc">${r.description || ''}</div>
+                        <div style="margin-top:4px;font-size:12px;color:var(--text-muted);">
+                            Room ID: <strong>${r.room_id}</strong>
                         </div>
                     </div>
                     <div class="room-actions">
-                        ${room.status !== 'ended' ? `
-                            <button class="room-btn btn-join" onclick="joinRoom('${room.id}')">
-                                <i class="fas fa-sign-in-alt"></i> Join Room
-                            </button>
+                        ${r.status === 'active' ? `
+                            <a href="/room/${r.room_id}" class="room-btn enter-btn">
+                                <i class="fas fa-sign-in-alt"></i> Enter
+                            </a>
                         ` : ''}
-                        <button class="room-btn btn-secondary" onclick="editRoom('${room.id}')">
-                            <i class="fas fa-cog"></i>
-                        </button>
-                        <button class="room-btn btn-delete" onclick="deleteRoom('${room.id}')">
+                        <button onclick="deleteRoom(${r.room_id})" class="room-btn delete-btn">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </div>
             `).join('');
-        }
 
-        function renderJoinedRooms() {
-            const container = document.getElementById('joinedRoomsList');
-            
-            if (joinedRooms.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon"><i class="fas fa-users-slash"></i></div>
-                        <div class="empty-text">You haven't joined any rooms yet</div>
-                    </div>
-                `;
+            // Render invite links for active rooms
+            renderInviteLinks(rooms.filter(r => r.status === 'active'));
+        });
+}
+
+
+// ── Joined Rooms ──────────────────────────────────────────────
+
+function loadJoinedRooms() {
+    fetch('/api/get-joined-rooms')
+        .then(r => r.json())
+        .then(rooms => {
+            const el = document.getElementById('joinedRoomsList');
+
+            if (rooms.length === 0) {
+                el.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-users-slash"></i></div><div class="empty-text">You haven't joined any rooms yet</div></div>`;
                 return;
             }
 
-            container.innerHTML = joinedRooms.map(room => `
-                <div class="room-card ${room.status}">
-                    <div class="room-header">
-                        <div class="room-info">
-                            <div class="room-name">${room.name}</div>
-                            <div class="room-topic">Host: ${room.host}</div>
-                            <div class="room-meta">
-                                <span class="room-badge">
-                                    <i class="fas fa-users"></i> ${room.participantCount}
-                                </span>
-                                <span class="status-badge status-${room.status}">
-                                    ${room.status === 'active' ? '🟢' : '⚪'} ${room.status}
-                                </span>
-                            </div>
+            el.innerHTML = rooms.map(r => `
+                <div class="room-card ${r.status === 'closed' ? 'closed-room' : ''}">
+                    <div class="room-info">
+                        <div class="room-name">
+                            ${r.room_name}
+                            ${r.status === 'closed'
+                                ? '<span style="font-size:11px;color:#f5494a;margin-left:6px;">[Closed by admin]</span>'
+                                : '<span style="font-size:11px;color:#2dce89;margin-left:6px;">● Active</span>'}
+                        </div>
+                        <div class="room-meta">
+                            ${r.subject} · Host: ${r.admin_name} · Joined ${r.join_date}
                         </div>
                     </div>
                     <div class="room-actions">
-                        ${room.status === 'active' ? `
-                            <button class="room-btn btn-join" onclick="joinRoom('${room.id}')">
-                                <i class="fas fa-sign-in-alt"></i> Join
-                            </button>
-                        ` : `
-                            <button class="room-btn btn-secondary">
-                                <i class="fas fa-info-circle"></i> Details
-                            </button>
-                        `}
-                        <button class="room-btn btn-delete" onclick="leaveRoom('${room.id}')">
-                            <i class="fas fa-sign-out-alt"></i> Leave
-                        </button>
+                        ${r.status === 'active' ? `
+                            <a href="/room/${r.room_id}" class="room-btn enter-btn">
+                                <i class="fas fa-sign-in-alt"></i> Enter
+                            </a>
+                        ` : ''}
                     </div>
                 </div>
             `).join('');
-        }
+        });
+}
 
-        function renderInvitations() {
-            const container = document.getElementById('invitationsList');
-            const badge = document.getElementById('inviteCount');
-            
-            const pendingInvites = invitations.filter(i => i.status === 'pending');
-            badge.textContent = pendingInvites.length;
 
-            if (pendingInvites.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon"><i class="fas fa-inbox"></i></div>
-                        <div class="empty-text">No pending invitations</div>
-                    </div>
-                `;
-                return;
-            }
+// ── Invite Links ──────────────────────────────────────────────
 
-            container.innerHTML = pendingInvites.map(invite => `
-                <div class="invitation-card">
-                    <div class="invitation-header">
-                        <div class="invitation-room">${invite.roomName}</div>
-                        <div class="invitation-from">From: ${invite.fromUserName}</div>
-                    </div>
-                    <div class="invitation-actions">
-                        <button class="invitation-btn btn-accept" onclick="acceptInvite('${invite.id}')">
-                            <i class="fas fa-check"></i> Accept
-                        </button>
-                        <button class="invitation-btn btn-decline" onclick="declineInvite('${invite.id}')">
-                            <i class="fas fa-times"></i> Decline
-                        </button>
-                    </div>
+function renderInviteLinks(activeRooms) {
+    const el = document.getElementById('inviteLinksList');
+
+    if (!activeRooms || activeRooms.length === 0) {
+        el.innerHTML = `<div class="empty-state"><div class="empty-text" style="font-size:12px;padding:20px 0;">Create a room to generate invite links</div></div>`;
+        return;
+    }
+
+    el.innerHTML = activeRooms.map(r => {
+        const link = `${window.location.origin}/room/${r.room_id}`;
+        const waText = encodeURIComponent(`Join my EduLink study room "${r.room_name}"!\n🔗 Room ID: ${r.room_id}\n⬇️ Link: ${link}`);
+        return `
+            <div class="link-item">
+                <div class="link-room-name">${r.room_name}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">ID: ${r.room_id}</div>
+                <div class="link-actions" style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <button class="link-btn" onclick="copyInviteLink('${link}', this)">
+                        <i class="fas fa-copy"></i> Copy Link
+                    </button>
+                    <a class="link-btn" href="https://wa.me/?text=${waText}" target="_blank"
+                       style="text-decoration:none;color:inherit;">
+                        <i class="fab fa-whatsapp" style="color:#25D366;"></i> WhatsApp
+                    </a>
+                    <button class="link-btn" onclick="nativeShare('${r.room_name}', '${link}')">
+                        <i class="fas fa-share-alt"></i> Share
+                    </button>
                 </div>
-            `).join('');
-        }
-
-        function renderInviteLinks() {
-            const container = document.getElementById('inviteLinksList');
-            const activeRooms = myRooms.filter(r => r.status === 'active' || r.status === 'scheduled');
-
-            if (activeRooms.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-text" style="font-size: 12px; padding: 20px 0;">Create a room to generate invite links</div>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = activeRooms.map(room => `
-                <div class="link-item">
-                    <div class="link-room-name">${room.name}</div>
-                    <div class="link-code">
-                        <span class="code-text">${room.roomCode}</span>
-                        <button class="copy-btn" onclick="copyCode('${room.roomCode}')">
-                            <i class="fas fa-copy"></i> Copy
-                        </button>
-                    </div>
-                    <div class="link-actions">
-                        <button class="link-btn" onclick="shareLink('${room.id}')">
-                            <i class="fas fa-share-alt"></i> Share
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function joinRoom(roomId) {
-            // Redirect to room page
-            localStorage.setItem('current_room_id', roomId);
-            window.location.href = 'room.html?id=' + roomId;
-        }
-
-        function deleteRoom(roomId) {
-            if (confirm('Delete this room? This action cannot be undone.')) {
-                myRooms = myRooms.filter(r => r.id !== roomId);
-                saveData();
-                renderMyRooms();
-                renderInviteLinks();
-                updateStats();
-                showNotification('Room deleted!');
-            }
-        }
-
-        function editRoom(roomId) {
-            alert('Edit room settings - Coming soon!');
-        }
-
-        function leaveRoom(roomId) {
-            if (confirm('Leave this room?')) {
-                joinedRooms = joinedRooms.filter(r => r.id !== roomId);
-                saveData();
-                renderJoinedRooms();
-                updateStats();
-                showNotification('Left room');
-            }
-        }
-
-        function acceptInvite(inviteId) {
-            const invite = invitations.find(i => i.id === inviteId);
-            if (invite) {
-                invite.status = 'accepted';
-                // Add to joined rooms (would fetch from server in real app)
-                joinedRooms.push({
-                    id: invite.roomId,
-                    name: invite.roomName,
-                    host: invite.fromUserName,
-                    participantCount: 5,
-                    status: 'active'
-                });
-                saveData();
-                renderInvitations();
-                renderJoinedRooms();
-                updateStats();
-                showNotification('Invitation accepted!');
-            }
-        }
-
-        function declineInvite(inviteId) {
-            const invite = invitations.find(i => i.id === inviteId);
-            if (invite) {
-                invite.status = 'declined';
-                saveData();
-                renderInvitations();
-                showNotification('Invitation declined');
-            }
-        }
-
-        function copyCode(code) {
-            navigator.clipboard.writeText(code).then(() => {
-                showNotification('Code copied: ' + code);
-            });
-        }
-
-        function shareLink(roomId) {
-            const room = myRooms.find(r => r.id === roomId);
-            if (room) {
-                const link = `${window.location.origin}/room.html?code=${room.roomCode}`;
-                if (navigator.share) {
-                    navigator.share({
-                        title: room.name,
-                        text: `Join my study room: ${room.name}`,
-                        url: link
-                    });
-                } else {
-                    navigator.clipboard.writeText(link);
-                    showNotification('Link copied!');
-                }
-            }
-        }
-
-        function saveData() {
-            localStorage.setItem('edulink_my_rooms', JSON.stringify(myRooms));
-            localStorage.setItem('edulink_joined_rooms', JSON.stringify(joinedRooms));
-            localStorage.setItem('edulink_invitations', JSON.stringify(invitations));
-        }
-
-        function showNotification(message) {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: linear-gradient(135deg, var(--primary), var(--accent-1));
-                color: white;
-                padding: 16px 24px;
-                border-radius: 10px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-                z-index: 10001;
-                animation: slideIn 0.3s ease;
-            `;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-        }
-
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(400px); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-            @keyframes slideOut {
-                from { transform: translateX(0); opacity: 1; }
-                to { transform: translateX(400px); opacity: 0; }
-            }
+            </div>
         `;
-        document.head.appendChild(style);
+    }).join('');
+}
 
-        // Add some demo data for testing
-        if (myRooms.length === 0) {
-            // Demo data will be added when user creates rooms
-        }
+function copyInviteLink(link, btn) {
+    navigator.clipboard.writeText(link).then(() => {
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copy Link'; }, 2000);
+    });
+}
 
-        // Add demo invitations
-        if (invitations.length === 0) {
-            invitations = [
-                {
-                    id: 'inv_001',
-                    roomId: 'room_demo_1',
-                    roomName: 'Mathematics Study Group',
-                    fromUserId: 'user_priya',
-                    fromUserName: 'Priya',
-                    status: 'pending'
-                },
-                {
-                    id: 'inv_002',
-                    roomId: 'room_demo_2',
-                    roomName: 'CS Algorithms',
-                    fromUserId: 'user_rahul',
-                    fromUserName: 'Rahul',
-                    status: 'pending'
-                }
-            ];
-            localStorage.setItem('edulink_invitations', JSON.stringify(invitations));
-            renderInvitations();
-        }
+function nativeShare(name, link) {
+    if (navigator.share) {
+        navigator.share({ title: name, text: `Join my EduLink study room: ${name}`, url: link });
+    } else {
+        navigator.clipboard.writeText(link);
+        showToast('Link copied to clipboard!', 'success');
+    }
+}
+
+
+// ── Create Room ───────────────────────────────────────────────
+
+function initListeners() {
+    // Tab switching
+    document.querySelectorAll('.room-tab').forEach(tab => {
+        tab.addEventListener('click', function () {
+            document.querySelectorAll('.room-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            currentTab = this.dataset.tab;
+            loadMyRooms();
+        });
+    });
+
+    // Modal: open / close
+    document.getElementById('createRoomBtn').onclick  = openModal;
+    document.getElementById('closeModalBtn').onclick  = closeModal;
+    document.getElementById('cancelCreateBtn').onclick = closeModal;
+
+    // Password checkbox toggle
+    document.getElementById('passwordProtected').addEventListener('change', function () {
+        document.getElementById('roomPassword').style.display = this.checked ? 'block' : 'none';
+        if (!this.checked) document.getElementById('roomPassword').value = '';
+    });
+
+    // Save room
+    document.getElementById('saveRoomBtn').onclick = createRoom;
+
+    // Join by ID
+    document.getElementById('joinRoomBtn').onclick = handleJoinById;
+    document.getElementById('joinRoomIdInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') handleJoinById();
+    });
+
+    // Password modal confirm
+    document.getElementById('closePwdModalBtn').onclick = closePwdModal;
+    document.getElementById('cancelPwdBtn').onclick     = closePwdModal;
+    document.getElementById('confirmJoinBtn').onclick   = confirmJoin;
+    document.getElementById('joinPasswordInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') confirmJoin();
+    });
+
+    // Close modals on backdrop click
+    document.getElementById('createRoomModal').addEventListener('click', e => {
+        if (e.target.id === 'createRoomModal') closeModal();
+    });
+    document.getElementById('passwordModal').addEventListener('click', e => {
+        if (e.target.id === 'passwordModal') closePwdModal();
+    });
+}
+
+function openModal() {
+    document.getElementById('createRoomModal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('createRoomModal').style.display = 'none';
+    document.getElementById('createRoomForm').reset();
+    document.getElementById('roomPassword').style.display = 'none';
+}
+
+function closePwdModal() {
+    document.getElementById('passwordModal').style.display = 'none';
+    document.getElementById('joinPasswordInput').value = '';
+    pendingJoinId = null;
+}
+
+
+function createRoom() {
+    const name    = document.getElementById('roomName').value.trim();
+    const subject = document.getElementById('roomSubject').value.trim();
+    const desc    = document.getElementById('roomDescription').value.trim();
+    const pwdProtected = document.getElementById('passwordProtected').checked;
+    const password = pwdProtected ? document.getElementById('roomPassword').value.trim() : '';
+
+    if (!name)    return showToast('Room name is required!', 'error');
+    if (!subject) return showToast('Subject is required!', 'error');
+    if (pwdProtected && !password) return showToast('Enter a password!', 'error');
+
+    const fd = new FormData();
+    fd.append('room_name', name);
+    fd.append('subject', subject);
+    fd.append('room_description', desc);
+    if (password) fd.append('room_password', password);
+
+    fetch('/api/create-room', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                closeModal();
+                showToast(`Room "${data.room_name}" created! +1 Stack 🔥`, 'success');
+                loadMyRooms();
+                loadStats();
+            } else {
+                showToast(data.error || 'Failed to create room', 'error');
+            }
+        });
+}
+
+
+// ── Join by ID ────────────────────────────────────────────────
+
+function handleJoinById() {
+    const roomId = document.getElementById('joinRoomIdInput').value.trim();
+    if (!roomId) return showToast('Enter a Room ID!', 'error');
+    attemptJoin(roomId, '');
+}
+
+function attemptJoin(roomId, password) {
+    const fd = new FormData();
+    fd.append('room_id', roomId);
+    if (password) fd.append('password', password);
+
+    fetch('/api/join-room', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                closePwdModal();
+                showToast('Joined! Entering room...', 'success');
+                setTimeout(() => { window.location.href = '/room/' + data.room_id; }, 600);
+            } else if (data.error === 'Incorrect password') {
+                // Show password modal
+                pendingJoinId = roomId;
+                document.getElementById('passwordModal').style.display = 'flex';
+                document.getElementById('joinPasswordInput').focus();
+                if (password) showToast('Incorrect password, try again.', 'error');
+            } else {
+                showToast(data.error || 'Could not join room', 'error');
+            }
+        });
+}
+
+function confirmJoin() {
+    const password = document.getElementById('joinPasswordInput').value.trim();
+    if (!password) return showToast('Enter the password!', 'error');
+    if (!pendingJoinId) return;
+    attemptJoin(pendingJoinId, password);
+}
+
+
+// ── Delete Room ───────────────────────────────────────────────
+
+function deleteRoom(roomId) {
+    if (!confirm('Delete this room permanently? All messages will be lost.')) return;
+    const fd = new FormData();
+    fd.append('room_id', roomId);
+    fetch('/api/delete-room', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Room deleted', 'success');
+                loadMyRooms();
+                loadStats();
+            } else {
+                showToast(data.error || 'Could not delete', 'error');
+            }
+        });
+}
+
+// ── Inline styles for join-room card and closed-room ─────────
+
+const style = document.createElement('style');
+style.textContent = `
+    .join-room-card {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 16px;
+        border: 1px solid var(--border-color);
+    }
+    .join-room-card h3 {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: var(--text-primary);
+    }
+    .join-room-card p {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 12px;
+    }
+    .join-input-row {
+        display: flex;
+        gap: 8px;
+    }
+    .join-id-input {
+        flex: 1;
+        padding: 10px 14px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-size: 14px;
+        outline: none;
+    }
+    .join-id-input:focus { border-color: var(--primary); }
+    .join-id-btn {
+        padding: 10px 18px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+    .join-id-btn:hover { opacity: 0.85; }
+
+    .closed-room { opacity: 0.65; }
+
+    .link-item {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .link-item:last-child { border-bottom: none; }
+    .link-room-name {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text-primary);
+        margin-bottom: 2px;
+    }
+    .link-btn {
+        padding: 6px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-size: 12px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        text-decoration: none;
+    }
+    .link-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .stat-icon.orange { background: rgba(251,137,64,0.12); color:#fb8940; }
+`;
+document.head.appendChild(style);
+
+
+// ── Toast helper (uses common.js if available, else inline) ───
+
+function showToast(msg, type) {
+    if (typeof window.showToast === 'function' && window.showToast !== showToast) {
+        window.showToast(msg, type); return;
+    }
+    const t = document.createElement('div');
+    t.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;
+        background:${type==='error'?'#f5494a':'#2dce89'};color:white;
+        padding:12px 20px;border-radius:10px;font-size:14px;font-weight:500;
+        box-shadow:0 4px 20px rgba(0,0,0,0.2);animation:slideIn .3s ease;`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}

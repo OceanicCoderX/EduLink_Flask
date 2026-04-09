@@ -2,227 +2,474 @@
 {% block title %}{{ room.room_name }} - EduLink{% endblock %}
 {% block extra_css %}
 <style>
-/* ── Room Page Styles ── */
-.room-layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; height: calc(100vh - 80px); }
-.video-section { background: var(--bg-secondary); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; }
-.video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; flex: 1; min-height: 0; }
-.video-tile { background: #1a1a2e; border-radius: 12px; position: relative; min-height: 150px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+/* ══ Room Page Layout ══ */
+.room-wrapper { display: flex; flex-direction: column; height: calc(100vh - 80px); gap: 12px; }
+.room-top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.room-title   { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.room-sub     { font-size: 13px; color: var(--text-muted); }
+.room-badges  { display: flex; align-items: center; gap: 8px; }
+.badge-live   { background: #2dce89; color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-timer  { background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.back-btn     { color: var(--text-muted); text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+.back-btn:hover { color: var(--primary); }
+
+/* ── Member Dots ── */
+.member-dots  { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.member-dot   { width: 30px; height: 30px; border-radius: 50%; background: var(--primary); color: white;
+                display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+                position: relative; cursor: default; border: 2px solid transparent; transition: transform .2s; }
+.member-dot:hover { transform: scale(1.1); }
+.member-dot.online { border-color: #2dce89; }
+.member-dot .dot-tooltip { display: none; position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
+                background: rgba(0,0,0,0.8); color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px;
+                white-space: nowrap; pointer-events: none; }
+.member-dot:hover .dot-tooltip { display: block; }
+.member-count { font-size: 12px; color: var(--text-muted); margin-left: 4px; }
+
+/* ── Main Grid ── */
+.room-main { display: grid; grid-template-columns: 1fr 320px; gap: 16px; flex: 1; min-height: 0; }
+
+/* ── Video Section ── */
+.video-section { background: var(--bg-secondary); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; }
+.video-grid    { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; flex: 1; min-height: 0; }
+.video-tile    { background: #0d1117; border-radius: 12px; position: relative; min-height: 140px;
+                display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .video-tile video { width: 100%; height: 100%; object-fit: cover; }
-.video-tile .user-label { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 6px; font-size: 13px; }
-.video-tile .no-video { color: white; font-size: 32px; }
-.video-controls { display: flex; gap: 12px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
-.video-btn { padding: 10px 20px; border-radius: 50px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; }
-.btn-cam  { background: var(--primary); color: white; }
-.btn-mic  { background: var(--accent-3); color: white; }
-.btn-hang { background: var(--accent-2); color: white; }
-.btn-screen { background: var(--accent-4); color: white; }
+.user-label   { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.65); color: white;
+                padding: 3px 8px; border-radius: 6px; font-size: 12px; }
+.cam-off-icon { font-size: 28px; opacity: 0.4; }
+.video-controls { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+.video-btn { padding: 9px 18px; border-radius: 50px; border: none; cursor: pointer; font-weight: 600; font-size: 13px;
+             display: flex; align-items: center; gap: 6px; transition: opacity .2s; }
+.video-btn:hover { opacity: 0.85; }
+.btn-cam      { background: var(--primary); color: white; }
+.btn-mic      { background: var(--accent-3); color: white; }
+.btn-leave    { background: var(--accent-2); color: white; padding: 9px 22px; font-weight: 700; }
+.btn-screen   { background: var(--accent-4, #5e72e4); color: white; }
+.btn-cam.off  { background: #6c757d; }
+.btn-mic.off  { background: #6c757d; }
 
-/* ── Chat Section ── */
-.chat-section { background: var(--bg-secondary); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
-.chat-header { padding: 16px 20px; border-bottom: 1px solid var(--border-color); font-weight: 600; }
-.chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
-.chat-msg { display: flex; flex-direction: column; max-width: 85%; }
+/* ── Right Panel (Chat + Notes tabs) ── */
+.right-panel  { background: var(--bg-secondary); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
+.panel-tabs   { display: flex; border-bottom: 1px solid var(--border-color); }
+.panel-tab    { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 13px; font-weight: 600;
+                color: var(--text-muted); border: none; background: none; transition: all .2s; }
+.panel-tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); background: rgba(94,114,228,0.06); }
+
+/* Chat */
+.chat-section  { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.chat-msg      { display: flex; flex-direction: column; max-width: 85%; }
 .chat-msg.mine { align-self: flex-end; align-items: flex-end; }
-.chat-msg .msg-author { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
-.chat-msg .msg-bubble { background: var(--bg-primary); border-radius: 12px; padding: 8px 12px; font-size: 14px; line-height: 1.4; }
+.msg-author    { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+.msg-bubble    { background: var(--bg-primary); border-radius: 12px; padding: 8px 12px; font-size: 14px; line-height: 1.4; }
 .chat-msg.mine .msg-bubble { background: var(--primary); color: white; }
-.chat-msg .msg-time { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
-.chat-input-area { padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; gap: 8px; }
-.chat-input { flex: 1; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 50px; background: var(--bg-primary); color: var(--text-primary); font-size: 14px; outline: none; }
-.chat-send-btn { background: var(--primary); color: white; border: none; border-radius: 50%; width: 38px; height: 38px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.msg-time      { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.chat-input-area { padding: 10px 14px; border-top: 1px solid var(--border-color); display: flex; gap: 8px; }
+.chat-input  { flex: 1; padding: 9px 14px; border: 1px solid var(--border-color); border-radius: 50px;
+               background: var(--bg-primary); color: var(--text-primary); font-size: 14px; outline: none; }
+.chat-input:focus { border-color: var(--primary); }
+.send-btn    { background: var(--primary); color: white; border: none; border-radius: 50%; width: 36px; height: 36px;
+               cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
-.room-top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.room-title { font-size: 20px; font-weight: 700; }
-.room-badge { background: var(--primary); color: white; padding: 4px 12px; border-radius: 50px; font-size: 12px; }
-.member-dots { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
-.member-dot { width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; position: relative; cursor: default; }
+/* Notes panel */
+.notes-section { flex: 1; display: none; flex-direction: column; min-height: 0; }
+.notes-section.active { display: flex; }
+.notes-textarea { flex: 1; padding: 14px; border: none; background: var(--bg-primary); color: var(--text-primary);
+                  font-size: 14px; line-height: 1.6; resize: none; outline: none; font-family: inherit; }
+.notes-footer { padding: 10px 14px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.notes-save-btn { padding: 8px 18px; background: var(--primary); color: white; border: none; border-radius: 8px;
+                  cursor: pointer; font-weight: 600; font-size: 13px; }
+.notes-hint   { font-size: 11px; color: var(--text-muted); }
 
-/* Admin controls */
-.admin-panel { padding: 12px 16px; border-top: 1px solid var(--border-color); }
-.members-list-admin { display: flex; flex-direction: column; gap: 6px; max-height: 120px; overflow-y: auto; }
-.member-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
-.kick-btn { background: var(--accent-2); color: white; border: none; border-radius: 4px; padding: 2px 8px; font-size: 11px; cursor: pointer; }
+/* Admin panel */
+.admin-panel   { padding: 10px 14px; border-top: 1px solid var(--border-color); background: rgba(245,73,74,0.04); }
+.admin-title   { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+.admin-members { display: flex; flex-direction: column; gap: 4px; max-height: 100px; overflow-y: auto; }
+.admin-row     { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+.kick-btn      { background: var(--accent-2); color: white; border: none; border-radius: 4px; padding: 2px 8px; font-size: 11px; cursor: pointer; }
 
-@media (max-width: 768px) { .room-layout { grid-template-columns: 1fr; } .chat-section { height: 400px; } }
+.sys-msg { text-align: center; font-size: 12px; color: var(--text-muted); padding: 4px; font-style: italic; }
+
+@media (max-width: 768px) {
+    .room-main { grid-template-columns: 1fr; }
+    .right-panel { height: 380px; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<main class="main-content" style="padding: 16px;">
+<main class="main-content" style="padding:14px;">
+<div class="room-wrapper">
+
     <!-- Top Bar -->
     <div class="room-top-bar">
         <div>
             <div class="room-title">{{ room.room_name }}</div>
-            <span style="color:var(--text-muted);font-size:13px;">{{ room.subject }} • Room #{{ room.room_id }}</span>
+            <div class="room-sub">{{ room.subject }} &bull; Room #{{ room.room_id }}</div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-            <span class="room-badge"><i class="fas fa-circle" style="font-size:8px;"></i> Live</span>
-            <a href="{{ url_for('classroom.classroom') }}" style="color:var(--text-muted);text-decoration:none;"><i class="fas fa-arrow-left"></i> Back</a>
+        <div class="room-badges">
+            <span class="badge-live"><i class="fas fa-circle" style="font-size:7px;"></i> Live</span>
+            <span class="badge-timer" id="sessionTimer">00:00</span>
+            {% if room.has_password %}
+            <span style="font-size:12px;color:var(--text-muted);" title="Password protected">🔒</span>
+            {% endif %}
         </div>
+        <a href="{{ url_for('classroom.classroom') }}" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Back
+        </a>
     </div>
 
-    <!-- Members -->
-    <div class="member-dots" id="memberDots">
-        {% for m in members %}
-        <div class="member-dot" title="{{ m.name }}">{{ m.name[0]|upper }}</div>
-        {% endfor %}
-        <!-- Current user (always shown) -->
-        <div class="member-dot" style="background:var(--accent-3);" title="{{ user.profilename }}">{{ user.profilename[0]|upper if user.profilename else 'Y' }}</div>
+    <!-- Members Row -->
+    <div style="display:flex;align-items:center;gap:12px;">
+        <div class="member-dots" id="memberDots">
+            <!-- Admin dot (always shown) -->
+            {% if is_admin %}
+            <div class="member-dot online" style="background:var(--accent-2);"
+                 title="{{ user.profilename }} (Admin)">
+                {{ user.profilename[0]|upper if user.profilename else 'A' }}
+                <span class="dot-tooltip">{{ user.profilename }} (You · Admin)</span>
+            </div>
+            {% else %}
+            <!-- Current user dot -->
+            <div class="member-dot online" style="background:var(--accent-3);"
+                 title="{{ user.profilename }}">
+                {{ user.profilename[0]|upper if user.profilename else 'Y' }}
+                <span class="dot-tooltip">{{ user.profilename }} (You)</span>
+            </div>
+            {% endif %}
+            {% for m in members %}
+            <div class="member-dot" id="mdot_{{ m.user_id }}" title="{{ m.name }}">
+                {{ m.name[0]|upper }}
+                <span class="dot-tooltip">{{ m.name }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        <span class="member-count" id="memberCount">
+            {{ members|length + 1 }} in room
+        </span>
     </div>
 
-    <div class="room-layout">
+    <!-- Main Grid -->
+    <div class="room-main">
+
         <!-- Video Section -->
         <div class="video-section">
-            <h3 style="margin-bottom:12px;font-size:15px;">📹 Video Chat</h3>
             <div class="video-grid" id="videoGrid">
-                <!-- Local video tile -->
                 <div class="video-tile" id="localTile">
-                    <video id="localVideo" autoplay muted playsinline></video>
+                    <div class="cam-off-icon">📹</div>
+                    <video id="localVideo" autoplay muted playsinline style="display:none;"></video>
                     <div class="user-label">{{ user.profilename }} (You)</div>
                 </div>
             </div>
             <div class="video-controls">
-                <button class="video-btn btn-cam"    id="camBtn"><i class="fas fa-video"></i> Cam On</button>
-                <button class="video-btn btn-mic"    id="micBtn"><i class="fas fa-microphone"></i> Mic On</button>
-                <button class="video-btn btn-hang"   id="hangupBtn"><i class="fas fa-phone-slash"></i> Leave</button>
+                <button class="video-btn btn-cam off" id="camBtn">
+                    <i class="fas fa-video-slash"></i> Cam Off
+                </button>
+                <button class="video-btn btn-mic off" id="micBtn">
+                    <i class="fas fa-microphone-slash"></i> Mic Off
+                </button>
+                <button class="video-btn btn-leave" id="leaveBtn">
+                    <i class="fas fa-phone-slash"></i>
+                    {% if is_admin %}Close Room{% else %}Leave{% endif %}
+                </button>
             </div>
         </div>
 
-        <!-- Chat Section -->
-        <div class="chat-section">
-            <div class="chat-header">
-                <i class="fas fa-comments"></i> Room Chat
-                <span style="font-size:12px;color:var(--text-muted);font-weight:400;display:block;">Only members in this room can see messages</span>
+        <!-- Right Panel: Chat + Notes tabs -->
+        <div class="right-panel">
+            <div class="panel-tabs">
+                <button class="panel-tab active" id="tabChat" onclick="switchTab('chat')">
+                    <i class="fas fa-comments"></i> Chat
+                </button>
+                <button class="panel-tab" id="tabNotes" onclick="switchTab('notes')">
+                    <i class="fas fa-sticky-note"></i> Notes
+                </button>
             </div>
 
-            <div class="chat-messages" id="chatMessages">
-                {% for msg in messages %}
-                <div class="chat-msg {% if msg.user_id == user.user_id %}mine{% endif %}">
-                    {% if msg.user_id != user.user_id %}<div class="msg-author">{{ msg.username }}</div>{% endif %}
-                    <div class="msg-bubble">{{ msg.message }}</div>
-                    <div class="msg-time">{{ msg.time }}</div>
-                </div>
-                {% endfor %}
-            </div>
-
-            <div class="chat-input-area">
-                <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." maxlength="500">
-                <button class="chat-send-btn" id="sendBtn"><i class="fas fa-paper-plane"></i></button>
-            </div>
-
-            <!-- Admin Panel (sirf admin ke liye) -->
-            {% if is_admin %}
-            <div class="admin-panel">
-                <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">⚙️ Admin Controls</div>
-                <div class="members-list-admin" id="adminMembersList">
-                    {% for m in members %}
-                    <div class="member-row">
-                        <span>{{ m.name }}</span>
-                        <button class="kick-btn" onclick="removeMember({{ m.user_id }}, '{{ m.name }}')">
-                            <i class="fas fa-times"></i> Remove
-                        </button>
+            <!-- Chat -->
+            <div class="chat-section" id="chatSection">
+                <div class="chat-messages" id="chatMessages">
+                    {% for msg in messages %}
+                    <div class="chat-msg {% if msg.user_id == user.user_id %}mine{% endif %}">
+                        {% if msg.user_id != user.user_id %}
+                        <div class="msg-author">{{ msg.username }}</div>
+                        {% endif %}
+                        <div class="msg-bubble">{{ msg.message }}</div>
+                        <div class="msg-time">{{ msg.time }}</div>
                     </div>
                     {% endfor %}
                 </div>
+                <div class="chat-input-area">
+                    <input type="text" class="chat-input" id="chatInput"
+                           placeholder="Type a message..." maxlength="500">
+                    <button class="send-btn" id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+                </div>
+
+                <!-- Admin Controls -->
+                {% if is_admin and members %}
+                <div class="admin-panel">
+                    <div class="admin-title">⚙️ Admin — Remove Members</div>
+                    <div class="admin-members">
+                        {% for m in members %}
+                        <div class="admin-row">
+                            <span>{{ m.name }}</span>
+                            <button class="kick-btn"
+                                    onclick="kickMember({{ m.user_id }}, '{{ m.name }}')">
+                                <i class="fas fa-times"></i> Remove
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
+
+            <!-- Notes -->
+            <div class="notes-section" id="notesSection">
+                <textarea class="notes-textarea" id="roomNotesTextarea"
+                          placeholder="Take collaborative notes here... (shared with the room)">{{ room.room_notes or '' }}</textarea>
+                <div class="notes-footer">
+                    <span class="notes-hint">Auto-saved when you leave · +1 Stack on Save</span>
+                    <button class="notes-save-btn" onclick="saveNotes()">
+                        <i class="fas fa-save"></i> Save (+1 🔥)
+                    </button>
+                </div>
+            </div>
         </div>
+
     </div>
+</div>
 </main>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Flask-SocketIO client -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 <script>
 // ============================================================
-// Room.html — SocketIO Chat + WebRTC Video
+// room.js — Chat + WebRTC + Notes + Session tracking
 // ============================================================
 
 const ROOM_ID    = {{ room.room_id }};
 const MY_USER_ID = {{ user.user_id }};
-const MY_NAME    = "{{ user.profilename }}";
+const MY_NAME    = "{{ user.profilename|replace('"', '') }}";
+const IS_ADMIN   = {{ 'true' if is_admin else 'false' }};
 
-// ── Socket.IO Connect ────────────────────────────────────────
+// ── Session Timer ─────────────────────────────────────────────
+const sessionStart = Date.now();
+const timerEl      = document.getElementById('sessionTimer');
+setInterval(() => {
+    const s = Math.floor((Date.now() - sessionStart) / 1000);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    timerEl.textContent = h > 0
+        ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+        : `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}, 1000);
+
+// Send session time on page unload
+window.addEventListener('beforeunload', sendSessionTime);
+
+function sendSessionTime() {
+    const minutes = Math.floor((Date.now() - sessionStart) / 60000);
+    if (minutes < 1) return;
+    const fd = new FormData();
+    fd.append('room_id', ROOM_ID);
+    fd.append('minutes', minutes);
+    // Beacon API → works even during page unload
+    navigator.sendBeacon('/api/update-session-time', fd);
+}
+
+
+// ── Tab Switching ─────────────────────────────────────────────
+function switchTab(tab) {
+    const chatSection  = document.getElementById('chatSection');
+    const notesSection = document.getElementById('notesSection');
+    const tabChat      = document.getElementById('tabChat');
+    const tabNotes     = document.getElementById('tabNotes');
+
+    if (tab === 'chat') {
+        chatSection.style.display  = '';
+        notesSection.classList.remove('active');
+        tabChat.classList.add('active');
+        tabNotes.classList.remove('active');
+    } else {
+        chatSection.style.display  = 'none';
+        notesSection.classList.add('active');
+        tabChat.classList.remove('active');
+        tabNotes.classList.add('active');
+        // Load latest notes from server
+        fetch(`/api/get-room-notes/${ROOM_ID}`)
+            .then(r => r.json())
+            .then(d => {
+                const ta = document.getElementById('roomNotesTextarea');
+                if (d.notes && !ta.value) ta.value = d.notes;
+            });
+    }
+}
+
+
+// ── Notes Save ────────────────────────────────────────────────
+function saveNotes() {
+    const notes = document.getElementById('roomNotesTextarea').value;
+    const fd    = new FormData();
+    fd.append('room_id', ROOM_ID);
+    fd.append('notes', notes);
+
+    fetch('/api/save-room-notes', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) showRoomToast(d.message || 'Notes saved! +1 Stack 🔥', 'green');
+        });
+}
+
+
+// ── Socket.IO ────────────────────────────────────────────────
 const socket = io();
+socket.emit('join_classroom_room', { room_id: ROOM_ID, username: MY_NAME });
 
-// Join classroom room on connect
-socket.emit('join_classroom_room', { room_id: ROOM_ID });
-
-// New message received
 socket.on('classroom_new_message', (data) => {
     appendMessage(data.username, data.message, data.time, data.user_id === MY_USER_ID);
 });
 
-// User joined/left notifications
 socket.on('classroom_user_joined', (data) => {
-    appendSystemMessage(data.message);
-});
-socket.on('classroom_user_left', (data) => {
-    appendSystemMessage(data.message);
+    appendSystemMsg(`${data.username} joined the room`);
+    addMemberDot(data.user_id, data.username);
 });
 
-// ── Chat Functions ───────────────────────────────────────────
+socket.on('classroom_user_left', (data) => {
+    appendSystemMsg(`${data.username} left the room`);
+    removeMemberDot(data.user_id);
+});
+
+socket.on('room_closed', () => {
+    showRoomToast('Admin has closed this room.', 'red');
+    saveNotes();
+    sendSessionTime();
+    setTimeout(() => { window.location.href = '/classroom'; }, 2000);
+});
+
+
+// ── Member Dots (live) ────────────────────────────────────────
+function addMemberDot(userId, name) {
+    if (document.getElementById('mdot_' + userId)) return; // already there
+    const dotsEl = document.getElementById('memberDots');
+    const dot    = document.createElement('div');
+    dot.className   = 'member-dot online';
+    dot.id          = 'mdot_' + userId;
+    dot.innerHTML   = `${name[0].toUpperCase()}<span class="dot-tooltip">${name}</span>`;
+    dotsEl.appendChild(dot);
+    updateMemberCount(1);
+}
+
+function removeMemberDot(userId) {
+    const el = document.getElementById('mdot_' + userId);
+    if (el) { el.remove(); updateMemberCount(-1); }
+}
+
+function updateMemberCount(delta) {
+    const el   = document.getElementById('memberCount');
+    const curr = parseInt(el.textContent) || 1;
+    el.textContent = (curr + delta) + ' in room';
+}
+
+
+// ── Chat ──────────────────────────────────────────────────────
 const chatMessages = document.getElementById('chatMessages');
-const chatInput    = document.getElementById('chatInput');
-const sendBtn      = document.getElementById('sendBtn');
+chatMessages.scrollTop = chatMessages.scrollHeight;
 
 function appendMessage(username, message, time, isMe) {
     const div = document.createElement('div');
     div.className = `chat-msg ${isMe ? 'mine' : ''}`;
     div.innerHTML = `
         ${!isMe ? `<div class="msg-author">${username}</div>` : ''}
-        <div class="msg-bubble">${escapeHtml(message)}</div>
+        <div class="msg-bubble">${escHtml(message)}</div>
         <div class="msg-time">${time}</div>
     `;
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-function appendSystemMessage(text) {
+function appendSystemMsg(text) {
     const div = document.createElement('div');
-    div.style.cssText = 'text-align:center;font-size:12px;color:var(--text-muted);padding:4px;';
+    div.className = 'sys-msg';
     div.textContent = text;
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-function escapeHtml(str) {
+function escHtml(str) {
     const d = document.createElement('div');
     d.appendChild(document.createTextNode(str));
     return d.innerHTML;
 }
 
 function sendMessage() {
-    const msg = chatInput.value.trim();
+    const msg = document.getElementById('chatInput').value.trim();
     if (!msg) return;
     socket.emit('classroom_send_message', { room_id: ROOM_ID, message: msg });
-    chatInput.value = '';
+    document.getElementById('chatInput').value = '';
 }
 
-sendBtn.addEventListener('click', sendMessage);
-chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+document.getElementById('sendBtn').addEventListener('click', sendMessage);
+document.getElementById('chatInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendMessage();
+});
 
-// Scroll to bottom on load
-chatMessages.scrollTop = chatMessages.scrollHeight;
+
+// ── Leave / Close Room ────────────────────────────────────────
+document.getElementById('leaveBtn').addEventListener('click', async () => {
+    if (IS_ADMIN) {
+        const yes = confirm(
+            '⚠️ You are the admin.\n' +
+            'Leaving will PERMANENTLY close this room — no one will be able to enter again.\n\n' +
+            'Continue?'
+        );
+        if (!yes) return;
+
+        // Save notes before closing
+        saveNotes();
+        sendSessionTime();
+        stopMedia();
+
+        // Close room on server → broadcasts 'room_closed' to all members
+        const fd = new FormData();
+        fd.append('room_id', ROOM_ID);
+        await fetch('/api/close-room', { method: 'POST', body: fd });
+        socket.emit('close_classroom_room', { room_id: ROOM_ID });
+
+        window.location.href = '/classroom';
+    } else {
+        const yes = confirm('Leave this room?');
+        if (!yes) return;
+
+        saveNotes();
+        sendSessionTime();
+        stopMedia();
+
+        const fd = new FormData();
+        fd.append('room_id', ROOM_ID);
+        await fetch('/api/leave-room', { method: 'POST', body: fd });
+        socket.emit('leave_classroom_room', { room_id: ROOM_ID });
+
+        window.location.href = '/classroom';
+    }
+});
 
 
-// ── WebRTC Mesh Video Chat ───────────────────────────────────
-// Har peer doosre se seedha connect karta hai (no server)
-// Max 4 log ache se kaam karta hai
+// ── WebRTC ────────────────────────────────────────────────────
+let localStream = null;
+let peers       = {};
+let camOn       = false;
+let micOn       = false;
 
-let localStream   = null;
-let peers         = {};   // { socket_id: RTCPeerConnection }
-let camOn         = false;
-let micOn         = false;
+const localVideo = document.getElementById('localVideo');
+const camBtn     = document.getElementById('camBtn');
+const micBtn     = document.getElementById('micBtn');
+const videoGrid  = document.getElementById('videoGrid');
+const localTile  = document.getElementById('localTile');
 
-const localVideo  = document.getElementById('localVideo');
-const videoGrid   = document.getElementById('videoGrid');
-const camBtn      = document.getElementById('camBtn');
-const micBtn      = document.getElementById('micBtn');
-const hangupBtn   = document.getElementById('hangupBtn');
-
-// ICE servers — free STUN servers (LAN pe inke bina bhi kaam karta hai)
 const iceConfig = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -230,26 +477,34 @@ const iceConfig = {
     ]
 };
 
-// Cam toggle
+// Camera toggle — front camera (facingMode:user = front on mobile, only cam on laptop)
 camBtn.addEventListener('click', async () => {
     if (!localStream) {
         try {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: micOn });
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+                audio: micOn
+            });
             localVideo.srcObject = localStream;
+            localVideo.style.display = 'block';
+            localTile.querySelector('.cam-off-icon').style.display = 'none';
             camOn = true;
-            camBtn.innerHTML = '<i class="fas fa-video-slash"></i> Cam Off';
-            // Tell other peers we're ready
+            camBtn.className = 'video-btn btn-cam';
+            camBtn.innerHTML = '<i class="fas fa-video"></i> Cam On';
             socket.emit('webrtc_user_ready', { room_id: ROOM_ID });
         } catch (err) {
-            alert('Could not access camera: ' + err.message);
+            showRoomToast('Camera access denied: ' + err.message, 'red');
         }
     } else {
-        // Toggle camera track
-        localStream.getVideoTracks().forEach(t => {
-            t.enabled = !t.enabled;
-            camOn = t.enabled;
-        });
-        camBtn.innerHTML = camOn ? '<i class="fas fa-video-slash"></i> Cam Off' : '<i class="fas fa-video"></i> Cam On';
+        const tracks = localStream.getVideoTracks();
+        if (tracks.length) {
+            tracks[0].enabled = !tracks[0].enabled;
+            camOn = tracks[0].enabled;
+        }
+        camBtn.className = 'video-btn btn-cam' + (camOn ? '' : ' off');
+        camBtn.innerHTML = camOn
+            ? '<i class="fas fa-video"></i> Cam On'
+            : '<i class="fas fa-video-slash"></i> Cam Off';
     }
 });
 
@@ -259,23 +514,26 @@ micBtn.addEventListener('click', async () => {
         try {
             localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
             micOn = true;
-            micBtn.innerHTML = '<i class="fas fa-microphone-slash"></i> Mic Off';
+            micBtn.className = 'video-btn btn-mic';
+            micBtn.innerHTML = '<i class="fas fa-microphone"></i> Mic On';
             socket.emit('webrtc_user_ready', { room_id: ROOM_ID });
         } catch (err) {
-            alert('Could not access microphone: ' + err.message);
+            showRoomToast('Mic access denied: ' + err.message, 'red');
         }
     } else {
-        localStream.getAudioTracks().forEach(t => {
-            t.enabled = !t.enabled;
-            micOn = t.enabled;
-        });
-        micBtn.innerHTML = micOn ? '<i class="fas fa-microphone-slash"></i> Mic Off' : '<i class="fas fa-microphone"></i> Mic On';
+        const tracks = localStream.getAudioTracks();
+        if (tracks.length) {
+            tracks[0].enabled = !tracks[0].enabled;
+            micOn = tracks[0].enabled;
+        }
+        micBtn.className = 'video-btn btn-mic' + (micOn ? '' : ' off');
+        micBtn.innerHTML = micOn
+            ? '<i class="fas fa-microphone"></i> Mic On'
+            : '<i class="fas fa-microphone-slash"></i> Mic Off';
     }
 });
 
-// Hangup
-hangupBtn.addEventListener('click', () => {
-    socket.emit('leave_classroom_room', { room_id: ROOM_ID });
+function stopMedia() {
     if (localStream) {
         localStream.getTracks().forEach(t => t.stop());
         localStream = null;
@@ -286,110 +544,85 @@ hangupBtn.addEventListener('click', () => {
         if (tile) tile.remove();
     });
     peers = {};
-    window.location.href = '/classroom';
-});
+}
 
-// ── WebRTC Signaling ──────────────────────────────────────────
-
-// Naya peer aaya — unhein offer bhejo
-socket.on('webrtc_new_peer', async (data) => {
-    const { sid, username } = data;
-    const pc = createPeerConnection(sid, username);
+// WebRTC signaling
+socket.on('webrtc_new_peer', async ({ sid, username }) => {
+    const pc = createPC(sid, username);
     peers[sid] = pc;
-
-    if (localStream) {
-        localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-    }
-
+    if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     socket.emit('webrtc_offer', { room_id: ROOM_ID, target_sid: sid, offer });
 });
 
-// Offer mila — answer bhejo
-socket.on('webrtc_offer', async (data) => {
-    const { from_sid, offer } = data;
-    if (!peers[from_sid]) {
-        peers[from_sid] = createPeerConnection(from_sid, 'Peer');
-    }
+socket.on('webrtc_offer', async ({ from_sid, offer }) => {
+    if (!peers[from_sid]) peers[from_sid] = createPC(from_sid, 'Peer');
     const pc = peers[from_sid];
-
-    if (localStream) {
-        localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-    }
-
+    if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
     await pc.setRemoteDescription(new RTCSessionDescription(offer));
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     socket.emit('webrtc_answer', { target_sid: from_sid, answer });
 });
 
-// Answer mila
-socket.on('webrtc_answer', async (data) => {
-    const { from_sid, answer } = data;
-    if (peers[from_sid]) {
-        await peers[from_sid].setRemoteDescription(new RTCSessionDescription(answer));
-    }
+socket.on('webrtc_answer', async ({ from_sid, answer }) => {
+    if (peers[from_sid]) await peers[from_sid].setRemoteDescription(new RTCSessionDescription(answer));
 });
 
-// ICE candidate mila
-socket.on('webrtc_ice_candidate', async (data) => {
-    const { from_sid, candidate } = data;
-    if (peers[from_sid] && candidate) {
+socket.on('webrtc_ice_candidate', async ({ from_sid, candidate }) => {
+    if (peers[from_sid] && candidate)
         await peers[from_sid].addIceCandidate(new RTCIceCandidate(candidate));
-    }
 });
 
-// ── Helper: Create PeerConnection ───────────────────────────
-function createPeerConnection(sid, username) {
+function createPC(sid, username) {
     const pc = new RTCPeerConnection(iceConfig);
-
-    // ICE candidate mila — doosre ko bhejo
-    pc.onicecandidate = (event) => {
-        if (event.candidate) {
-            socket.emit('webrtc_ice_candidate', { target_sid: sid, candidate: event.candidate });
-        }
+    pc.onicecandidate = e => {
+        if (e.candidate)
+            socket.emit('webrtc_ice_candidate', { target_sid: sid, candidate: e.candidate });
     };
-
-    // Remote track aaya — video tile banao
-    pc.ontrack = (event) => {
+    pc.ontrack = e => {
         let tile = document.getElementById('tile_' + sid);
         if (!tile) {
             tile = document.createElement('div');
             tile.className = 'video-tile';
             tile.id = 'tile_' + sid;
-            tile.innerHTML = `
-                <video autoplay playsinline></video>
-                <div class="user-label">${username}</div>
-            `;
+            tile.innerHTML = `<video autoplay playsinline></video><div class="user-label">${username}</div>`;
             videoGrid.appendChild(tile);
         }
-        tile.querySelector('video').srcObject = event.streams[0];
+        tile.querySelector('video').srcObject = e.streams[0];
     };
-
-    // Connection closed
     pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+        if (['disconnected','failed','closed'].includes(pc.connectionState)) {
             const tile = document.getElementById('tile_' + sid);
             if (tile) tile.remove();
             delete peers[sid];
         }
     };
-
     return pc;
 }
 
-// ── Admin: Remove Member ─────────────────────────────────────
-function removeMember(memberId, memberName) {
+// ── Admin: kick member ────────────────────────────────────────
+function kickMember(memberId, memberName) {
     if (!confirm(`Remove ${memberName} from this room?`)) return;
     const fd = new FormData();
     fd.append('room_id', ROOM_ID);
     fd.append('member_id', memberId);
     fetch('/api/remove-room-member', { method: 'POST', body: fd })
         .then(r => r.json())
-        .then(d => {
-            if (d.success) alert(memberName + ' removed!');
-        });
+        .then(d => { if (d.success) showRoomToast(`${memberName} removed`, 'green'); });
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+function showRoomToast(msg, color) {
+    const t = document.createElement('div');
+    const bg = color === 'red' ? '#f5494a' : color === 'green' ? '#2dce89' : 'var(--primary)';
+    t.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;background:${bg};
+        color:white;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;
+        box-shadow:0 4px 20px rgba(0,0,0,.2);`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
 }
 </script>
 {% endblock %}

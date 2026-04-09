@@ -30,9 +30,9 @@
                     <div class="stat-label">Hours Spent</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon purple"><i class="fas fa-star"></i></div>
-                    <div class="stat-value" id="totalHours">0h</div>
-                    <div class="stat-label">Total Stack</div>
+                    <div class="stat-icon orange"><i class="fas fa-layer-group"></i></div>
+                    <div class="stat-value" id="totalStacks">{{ session.get('stacks', 0) }}</div>
+                    <div class="stat-label">Stacks</div>
                 </div>
             </div>
 
@@ -45,16 +45,12 @@
                     </h2>
                     <div class="room-tabs">
                         <button class="room-tab active" data-tab="active">Active</button>
-                        <button class="room-tab" data-tab="scheduled">Scheduled</button>
-                        <button class="room-tab" data-tab="past">Past</button>
+                        <button class="room-tab" data-tab="closed">Closed</button>
                     </div>
                 </div>
-
                 <div class="rooms-list" id="myRoomsList">
                     <div class="empty-state">
-                        <div class="empty-icon">
-                            <i class="fas fa-door-closed"></i>
-                        </div>
+                        <div class="empty-icon"><i class="fas fa-door-closed"></i></div>
                         <div class="empty-text">No rooms created yet. Click "Create Room" to start!</div>
                     </div>
                 </div>
@@ -66,13 +62,18 @@
                     <h2 class="section-title"><i class="fas fa-history"></i> Joined Rooms</h2>
                 </div>
                 <div class="rooms-list" id="joinedRoomsList">
-                    <div class="empty-state"><div class="empty-icon"><i class="fas fa-users-slash"></i></div><div class="empty-text">You haven't joined any rooms yet</div></div>
+                    <div class="empty-state">
+                        <div class="empty-icon"><i class="fas fa-users-slash"></i></div>
+                        <div class="empty-text">You haven't joined any rooms yet</div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- RIGHT SECTION -->
         <div class="right-section">
+
+            <!-- Create Room -->
             <div class="create-room-card">
                 <h3>Create Study Room</h3>
                 <p>Start a new session and invite your friends!</p>
@@ -81,36 +82,33 @@
                 </button>
             </div>
 
-            <!-- Invitations Panel -->
-                    <div class="invitations-panel">
-                        <div class="panel-header">
-                            <h3 class="panel-title">
-                                <i class="fas fa-envelope"></i>
-                                Invitations
-                                <span class="notification-badge" id="inviteCount">0</span>
-                            </h3>
-                        </div>
+            <!-- Join by Room ID -->
+            <div class="join-room-card">
+                <h3><i class="fas fa-sign-in-alt"></i> Join a Room</h3>
+                <p>Enter the Room ID to join an existing session.</p>
+                <div class="join-input-row">
+                    <input type="number" class="join-id-input" id="joinRoomIdInput"
+                           placeholder="Enter Room ID..." min="1">
+                    <button class="join-id-btn" id="joinRoomBtn">
+                        <i class="fas fa-arrow-right"></i> Join
+                    </button>
+                </div>
+            </div>
 
-                        <div class="invitations-list" id="invitationsList">
-                            <div class="empty-state">
-                                <div class="empty-icon">
-                                    <i class="fas fa-inbox"></i>
-                                </div>
-                                <div class="empty-text">No pending invitations</div>
-                            </div>
+            <!-- Invite Links Panel -->
+            <div class="invite-links-panel">
+                <div class="panel-header">
+                    <h3 class="panel-title"><i class="fas fa-link"></i> Invite Links</h3>
+                </div>
+                <div id="inviteLinksList">
+                    <div class="empty-state">
+                        <div class="empty-text" style="font-size:12px;padding:20px 0;">
+                            Create a room to generate invite links
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Invite Links Panel -->
-                    <div class="invite-links-panel">
-                        <div class="panel-header"><h3 class="panel-title"><i class="fas fa-link"></i> Invite Links </h3></div>
-                        <div id="inviteLinksList">
-                            <div class="empty-state">
-                                <div class="empty-text" style="font-size: 12px; padding: 20px 0;">Create a room to generate invite links</div>
-                            </div>
-                        </div>
-                    </div>
-            
         </div>
     </div>
 </main>
@@ -126,53 +124,60 @@
             <form id="createRoomForm">
                 <div class="form-group">
                     <label class="form-label">Room Name <span class="required">*</span></label>
-                    <input type="text" class="form-input" id="roomName" placeholder="e.g., Physics Study Group" required>
+                    <input type="text" class="form-input" id="roomName"
+                           placeholder="e.g., Physics Study Group" required>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Subject</label>
-                    <input type="text" class="form-input" id="roomSubject" placeholder="Subject Name reqyired" required>
+                    <label class="form-label">Subject <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="roomSubject"
+                           placeholder="e.g., Mathematics" required>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Description</label>
-                    <textarea class="form-textarea" id="roomDescription" placeholder="Brief description..."></textarea>
+                    <textarea class="form-textarea" id="roomDescription"
+                              placeholder="Brief description..."></textarea>
                 </div>
 
                 <div class="form-group">
                     <div class="checkbox-group">
                         <input type="checkbox" id="passwordProtected">
-                        <label for="passwordProtected">Password Protected</label>
+                        <label for="passwordProtected">🔒 Password Protected</label>
                     </div>
-                    <input type="password" class="form-input" id="roomPassword" placeholder="Enter room password" style="display: none;">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Schedule (Optional)</label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                        <input type="date" class="form-input" id="roomDate">
-                        <input type="time" class="form-input" id="roomTime">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Privacy</label>
-                    <div class="radio-group">
-                        <div class="radio-option">
-                            <input type="radio" id="publicRoom" name="privacy" value="public" checked>
-                            <label for="publicRoom">Public</label>
-                        </div>
-                        <div class="radio-option">
-                            <input type="radio" id="privateRoom" name="privacy" value="private">
-                            <label for="privateRoom">Private (Invite Only)</label>
-                        </div>
-                    </div>
+                    <input type="password" class="form-input" id="roomPassword"
+                           placeholder="Enter room password" style="display:none;margin-top:8px;">
                 </div>
             </form>
         </div>
         <div class="modal-footer">
             <button class="modal-btn btn-cancel" id="cancelCreateBtn">Cancel</button>
-            <button class="modal-btn btn-create" id="saveRoomBtn"><i class="fas fa-plus-circle"></i> Create Room</button>
+            <button class="modal-btn btn-create" id="saveRoomBtn">
+                <i class="fas fa-plus-circle"></i> Create Room
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Password Prompt Modal -->
+<div class="modal" id="passwordModal">
+    <div class="modal-content" style="max-width:380px;">
+        <div class="modal-header">
+            <h2 class="modal-title">🔒 Room Password Required</h2>
+            <button class="modal-close" id="closePwdModalBtn"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <p style="color:var(--text-secondary);margin-bottom:12px;font-size:14px;">
+                This room is password protected. Enter the password to join.
+            </p>
+            <input type="password" class="form-input" id="joinPasswordInput"
+                   placeholder="Enter room password...">
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn btn-cancel" id="cancelPwdBtn">Cancel</button>
+            <button class="modal-btn btn-create" id="confirmJoinBtn">
+                <i class="fas fa-sign-in-alt"></i> Join Room
+            </button>
         </div>
     </div>
 </div>
@@ -180,122 +185,4 @@
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/classroom.js') }}"></script>
-<script>
-// ── Classroom Page Logic — DB se rooms fetch karo ────────────
-
-document.addEventListener('DOMContentLoaded', () => {
-    loadMyRooms();
-    loadJoinedRooms();
-
-    // Create Room
-    document.getElementById('createRoomBtn').onclick = () => {
-        document.getElementById('createRoomModal').style.display = 'flex';
-    };
-    document.getElementById('closeModalBtn').onclick    = closeModal;
-    document.getElementById('cancelCreateBtn').onclick  = closeModal;
-
-    document.getElementById('saveRoomBtn').onclick = () => {
-        const name        = document.getElementById('roomName').value.trim();
-        const subject     = document.getElementById('roomSubject').value;
-        const description = document.getElementById('roomDescription').value.trim();
-        if (!name) return alert('Room name is required!');
-
-        const fd = new FormData();
-        fd.append('room_name', name);
-        fd.append('subject', subject);
-        fd.append('room_description', description);
-
-        fetch('/api/create-room', { method: 'POST', body: fd })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    closeModal();
-                    alert('Room created! Room ID: ' + data.room_id);
-                    loadMyRooms();
-                }
-            });
-    };
-
-    // Join by ID
-    document.getElementById('joinRoomBtn').onclick = () => {
-        const roomId = document.getElementById('joinRoomIdInput').value.trim();
-        if (!roomId) return alert('Enter a Room ID!');
-
-        const fd = new FormData();
-        fd.append('room_id', roomId);
-
-        fetch('/api/join-room', { method: 'POST', body: fd })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.href = '/room/' + roomId;
-                } else {
-                    alert('Could not join room. Check the ID.');
-                }
-            });
-    };
-});
-
-function closeModal() {
-    document.getElementById('createRoomModal').style.display = 'none';
-}
-
-function loadMyRooms() {
-    fetch('/api/get-my-rooms')
-        .then(r => r.json())
-        .then(rooms => {
-            const el = document.getElementById('myRoomsList');
-            document.getElementById('totalCreated').textContent = rooms.length;
-            if (rooms.length === 0) {
-                el.innerHTML = '<div class="empty-state"><div class="empty-icon"><i class="fas fa-door-closed"></i></div><div class="empty-text">No rooms created yet</div></div>';
-                return;
-            }
-            el.innerHTML = rooms.map(r => `
-                <div class="room-card">
-                    <div class="room-info">
-                        <div class="room-name">${r.room_name}</div>
-                        <div class="room-meta">${r.subject} • Created ${r.created_date}</div>
-                        <div class="room-desc">${r.description || ''}</div>
-                        <div style="margin-top:4px;font-size:12px;color:var(--text-muted);">Room ID: <strong>${r.room_id}</strong></div>
-                    </div>
-                    <div class="room-actions">
-                        <a href="/room/${r.room_id}" class="room-btn enter-btn"><i class="fas fa-sign-in-alt"></i> Enter</a>
-                        <button onclick="deleteRoom(${r.room_id})" class="room-btn delete-btn" style="background:var(--accent-2);color:white;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>
-            `).join('');
-        });
-}
-
-function loadJoinedRooms() {
-    fetch('/api/get-joined-rooms')
-        .then(r => r.json())
-        .then(rooms => {
-            const el = document.getElementById('joinedRoomsList');
-            document.getElementById('totalJoined').textContent = rooms.length;
-            if (rooms.length === 0) {
-                el.innerHTML = '<div class="empty-state"><div class="empty-text">You haven\'t joined any rooms yet</div></div>';
-                return;
-            }
-            el.innerHTML = rooms.map(r => `
-                <div class="room-card">
-                    <div class="room-info">
-                        <div class="room-name">${r.room_name}</div>
-                        <div class="room-meta">${r.subject} • Joined ${r.join_date}</div>
-                    </div>
-                    <a href="/room/${r.room_id}" class="room-btn enter-btn"><i class="fas fa-sign-in-alt"></i> Enter</a>
-                </div>
-            `).join('');
-        });
-}
-
-function deleteRoom(roomId) {
-    if (!confirm('Delete this room? This cannot be undone.')) return;
-    const fd = new FormData();
-    fd.append('room_id', roomId);
-    fetch('/api/delete-room', { method: 'POST', body: fd })
-        .then(r => r.json())
-        .then(data => { if (data.success) loadMyRooms(); });
-}
-</script>
 {% endblock %}
