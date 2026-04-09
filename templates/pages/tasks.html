@@ -8,10 +8,14 @@
 <main class="main-content">
     <!-- Header -->
     <div class="tasks-header">
-        <div class="header-left"><h1>📋 Tasks & Calendar</h1></div>
+        <div class="header-left">
+            <h1>📋 Tasks & Calendar</h1>
+        </div>
         <div class="header-actions">
-            <button class="action-btn btn-secondary" id="exportExcelBtn"><i class="fas fa-file-excel"></i><span>Export</span></button>
-            <button class="action-btn btn-primary" id="addTaskBtn"><i class="fas fa-plus"></i><span>Add Task</span></button>
+            <button class="action-btn btn-secondary" id="exportExcelBtn"><i
+                    class="fas fa-file-excel"></i><span>Export</span></button>
+            <button class="action-btn btn-primary" id="addTaskBtn"><i class="fas fa-plus"></i><span>Add
+                    Task</span></button>
         </div>
     </div>
 
@@ -21,12 +25,15 @@
             <svg class="progress-ring" width="160" height="160">
                 <defs>
                     <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#5e72e4;stop-opacity:1"/>
-                        <stop offset="100%" style="stop-color:#2dceb1;stop-opacity:1"/>
+                        <stop offset="0%" style="stop-color:#5e72e4;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#2dceb1;stop-opacity:1" />
                     </linearGradient>
                 </defs>
-                <circle class="progress-ring-bg" cx="80" cy="80" r="70"></circle>
-                <circle class="progress-ring-circle" cx="80" cy="80" r="70" stroke-dasharray="439.82" stroke-dashoffset="439.82" id="progressCircle"></circle>
+                <circle class="progress-ring-bg" cx="80" cy="80" r="70" fill="none" stroke="var(--border-color)"
+                    stroke-width="8" />
+                <circle class="progress-ring-circle" cx="80" cy="80" r="70" fill="none" stroke="var(--accent-primary)"
+                    stroke-width="8" stroke-dasharray="439.82" stroke-dashoffset="439.82" stroke-linecap="round"
+                    id="progressCircle" />
             </svg>
             <div class="progress-text">
                 <span class="progress-percentage" id="progressPercentage">0%</span>
@@ -34,10 +41,26 @@
             </div>
         </div>
         <div class="progress-stats">
-            <div class="stat-card"><span class="stat-value" id="totalTasksCount">0</span><span class="stat-label">Total Tasks</span></div>
-            <div class="stat-card"><span class="stat-value" id="completedTasksCount">0</span><span class="stat-label">Completed</span></div>
-            <div class="stat-card"><span class="stat-value" id="pendingTasksCount">0</span><span class="stat-label">Pending</span></div>
-            <div class="stat-card"><span class="stat-value" id="todayTasksCount">0</span><span class="stat-label">Due Today</span></div>
+            <div class="stat-card">
+                <span class="stat-value" id="totalTasksCount">0</span>
+                <span class="stat-label">Total Tasks</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="completedTasksCount">0</span>
+                <span class="stat-label">Completed</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="pendingTasksCount">0</span>
+                <span class="stat-label">Pending</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="todayTasksCount">0</span>
+                <span class="stat-label">Due Today</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="streakCount">0</span>
+                <span class="stat-label">Streak</span>
+            </div>
         </div>
     </div>
 
@@ -67,9 +90,15 @@
                 <button class="nav-arrow" id="nextBtn"><i class="fas fa-chevron-right"></i></button>
             </div>
         </div>
-        <div class="daily-view active" id="dailyView"><div class="daily-timeline" id="dailyTimeline"></div></div>
-        <div class="weekly-view" id="weeklyView"><div class="week-grid" id="weekGrid"></div></div>
-        <div class="monthly-view" id="monthlyView"><div class="month-grid" id="monthGrid"></div></div>
+        <div class="daily-view active" id="dailyView">
+            <div class="daily-timeline" id="dailyTimeline"></div>
+        </div>
+        <div class="weekly-view" id="weeklyView">
+            <div class="week-grid" id="weekGrid"></div>
+        </div>
+        <div class="monthly-view" id="monthlyView">
+            <div class="month-grid" id="monthGrid"></div>
+        </div>
     </div>
 
     <!-- Tasks List -->
@@ -104,11 +133,13 @@
             <form id="taskForm">
                 <div class="form-group">
                     <label class="form-label">Task Title <span class="required">*</span></label>
-                    <input type="text" class="form-input" id="taskTitle" name="taskTitle" placeholder="Enter task title" required>
+                    <input type="text" class="form-input" id="taskTitle" name="taskTitle" placeholder="Enter task title"
+                        required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Description</label>
-                    <textarea class="form-textarea" id="taskDescription" name="taskDescription" placeholder="Add task details..."></textarea>
+                    <textarea class="form-textarea" id="taskDescription" name="taskDescription"
+                        placeholder="Add task details..."></textarea>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Due Date & Time <span class="required">*</span></label>
@@ -120,9 +151,12 @@
                 <div class="form-group">
                     <label class="form-label">Priority <span class="required">*</span></label>
                     <div class="priority-options" id="taskPriority">
-                        <div class="priority-option high" data-priority="high"><i class="fas fa-exclamation-circle"></i> High</div>
-                        <div class="priority-option medium selected" data-priority="medium"><i class="fas fa-exclamation-triangle"></i> Medium</div>
-                        <div class="priority-option low" data-priority="low"><i class="fas fa-check-circle"></i> Low</div>
+                        <div class="priority-option high" data-priority="high"><i class="fas fa-exclamation-circle"></i>
+                            High</div>
+                        <div class="priority-option medium selected" data-priority="medium"><i
+                                class="fas fa-exclamation-triangle"></i> Medium</div>
+                        <div class="priority-option low" data-priority="low"><i class="fas fa-check-circle"></i> Low
+                        </div>
                     </div>
                 </div>
                 <div class="form-group">
@@ -136,7 +170,8 @@
                 </div>
                 <div class="modal-footer">
                     <button class="modal-btn btn-cancel" id="cancelBtn">Cancel</button>
-                    <button type="button" class="modal-btn btn-save" id="saveTaskBtn"><i class="fas fa-save"></i> Save Task</button>
+                    <button type="button" class="modal-btn btn-save" id="saveTaskBtn"><i class="fas fa-save"></i> Save
+                        Task</button>
                 </div>
             </form>
         </div>

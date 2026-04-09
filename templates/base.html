@@ -17,12 +17,15 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- html2canvas + jsPDF (notebook/export ke liye) -->
+    <!-- html2canvas + jsPDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <!-- Main CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Common CSS (badges, toasts, avatars, etc.) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
 
     <!-- Page-specific CSS -->
     {% block extra_css %}{% endblock %}
@@ -62,16 +65,56 @@
                 <a href="{{ url_for('community.community') }}" class="nav-item {% if request.endpoint == 'community.community' %}active{% endif %}">
                     <i class="fas fa-user-friends"></i><span>Community</span>
                 </a>
+                <a href="{{ url_for('friends.friends_stack') }}" class="nav-item {% if request.endpoint == 'friends.friends_stack' %}active{% endif %}">
+                    <i class="fas fa-trophy"></i><span>Leaderboard</span>
+                </a>
                 <a href="{{ url_for('profile.profile') }}" class="nav-item {% if request.endpoint == 'profile.profile' %}active{% endif %}">
                     <i class="fas fa-user"></i><span>Profile</span>
                 </a>
             </nav>
 
-            <!-- Sidebar Footer — Profile + Theme + Logout -->
+            <!-- Sidebar Footer — Profile + Stacks + Theme + Logout -->
             <div class="sidebar-footer">
+                <!-- Profession Badge -->
+                {% if user.profession %}
+                <div class="sidebar-profession">
+                    {% set pclass = {
+                        'Student':      'badge-student',
+                        'Teacher':      'badge-teacher',
+                        'Individual':   'badge-individual',
+                        'Professional': 'badge-professional',
+                        'Other':        'badge-other'
+                    } %}
+                    {% set picon = {
+                        'Student':      '📚',
+                        'Teacher':      '🎓',
+                        'Individual':   '👤',
+                        'Professional': '💼',
+                        'Other':        '⭐'
+                    } %}
+                    <span class="profession-badge {{ pclass.get(user.profession, 'badge-other') }}">
+                        {{ picon.get(user.profession, '⭐') }} {{ user.profession }}
+                    </span>
+                </div>
+                {% endif %}
+
+                <!-- Stack + Streak Display -->
+                <div class="sidebar-stacks">
+                    <i class="fas fa-layer-group"></i>
+                    <span id="sidebarStackCount">{{ user.stacks or 0 }}</span>
+                    <span style="opacity:0.7;font-weight:400">Stacks</span>
+                </div>
+                <div class="sidebar-streak">
+                    <i class="fas fa-fire"></i>
+                    <span id="sidebarStreakCount">{{ user.streak or 0 }}</span>
+                    <span style="opacity:0.7;font-weight:400">Day Streak</span>
+                </div>
+
                 <div class="profile-card">
-                    <div class="profile-avatar" id="profileAvatar">
-                        {{ user.profilename[0]|upper if user.profilename else 'U' }}
+                    <div class="profile-avatar" id="profileAvatar"
+                         data-avatar-id="{{ user.get('avatar_id', 1) if user is mapping else 1 }}"
+                         data-initials="{{ (user.profilename or 'U')[0]|upper }}">
+                        {{ (user.profilename or 'U')[0]|upper }}
                     </div>
                     <div class="profile-info">
                         <div class="profile-name" id="profileName">{{ user.profilename or 'User' }}</div>
@@ -93,7 +136,7 @@
         <!-- Mobile Bottom Navigation -->
         <nav class="mobile-nav">
             <div class="mobile-nav-items">
-                <a href="{{ url_for('dashboard.dashboard') }}" class="mobile-nav-item"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
+                <a href="{{ url_for('dashboard.dashboard') }}" class="mobile-nav-item"><i class="fas fa-chart-line"></i><span>Home</span></a>
                 <a href="{{ url_for('focus.focus') }}" class="mobile-nav-item"><i class="fas fa-clock"></i><span>Focus</span></a>
                 <a href="{{ url_for('tasks.tasks') }}" class="mobile-nav-item"><i class="fas fa-tasks"></i><span>Tasks</span></a>
                 <a href="{{ url_for('notebook.notebook') }}" class="mobile-nav-item"><i class="fas fa-book"></i><span>Notes</span></a>
@@ -105,8 +148,9 @@
         {% block content %}{% endblock %}
     </div>
 
-    <!-- Common JS (theme, etc.) -->
+    <!-- Common JS (theme, toast, avatar, activity tracker) -->
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

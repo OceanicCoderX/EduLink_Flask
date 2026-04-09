@@ -1,10 +1,12 @@
 # ============================================================
 # routes/focus.py — Focus Timer Page + Save Session
+# Updated: +1 Stack per completed Pomodoro session
 # ============================================================
 
 from flask import Blueprint, render_template, request, session, redirect, url_for, jsonify
 from db import get_db_connection
 from functools import wraps
+from helpers.stacks import award_stack, log_activity
 
 focus_bp = Blueprint('focus', __name__)
 
@@ -29,38 +31,39 @@ def focus():
 def save_focus():
     """
     Focus session DB mein save karo.
-    Agar user ka existing record hai toh update, nahi toh insert.
+    Rule 8b: +1 Stack per completed Pomodoro session.
     """
     user_id          = session['user_id']
     task_name        = request.form.get('task', 'Study')
     sessions_count   = int(request.form.get('sessions', 1))
     duration_minutes = float(request.form.get('duration', 10))
-    stacks_earned    = int(request.form.get('stacks', 1))
+    stacks_earned    = int(request.form.get('stacks', sessions_count))  # 1 per session
 
     mydb   = get_db_connection()
     cursor = mydb.cursor()
 
-    # Check if record exists
-    cursor.execute("SELECT focus_id FROM focus WHERE user_id=%s ORDER BY session_date DESC LIMIT 1", (user_id,))
-    existing = cursor.fetchone()
-
-    if existing:
-        cursor.execute("""
-            UPDATE focus
-            SET task_name=%s, duration_minutes=duration_minutes+%s, sessions_count=sessions_count+%s, stacks_earned=stacks_earned+%s
-            WHERE user_id=%s ORDER BY session_date DESC LIMIT 1
-        """, (task_name, duration_minutes, sessions_count, stacks_earned, user_id))
-    else:
-        cursor.execute("""
-            INSERT INTO focus (user_id, task_name, duration_minutes, sessions_count, stacks_earned)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (user_id, task_name, duration_minutes, sessions_count, stacks_earned))
+    # Always insert a new session record
+    cursor.execute("""
+        INSERT INTO focus (user_id, task_name, duration_minutes, sessions_count, stacks_earned)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (user_id, task_name, duration_minutes, sessions_count, stacks_earned))
 
     mydb.commit()
     cursor.close()
     mydb.close()
 
-    return jsonify({"success": True, "message": "Session saved!"})
+    # Award stacks for each completed pomodoro session (Rule 8b)
+    result = award_stack(user_id, 'pomodoro_done', stacks_earned)
+    log_activity(user_id, 'focus', f'Completed {sessions_count} Pomodoro session(s) — {task_name}')
+
+    session['stacks'] = result.get('new_total', session.get('stacks', 0))
+
+    return jsonify({
+        "success":      True,
+        "message":      "Session saved!",
+        "stacks_given": stacks_earned,
+        "new_stacks":   result.get('new_total', 0)
+    })
 
 
 @focus_bp.route('/api/get-focus-stats')
@@ -72,15 +75,23 @@ def get_focus_stats():
     cursor  = mydb.cursor()
 
     cursor.execute("""
-        SELECT COALESCE(SUM(duration_minutes),0), COALESCE(SUM(sessions_count),0), COALESCE(SUM(stacks_earned),0)
+        SELECT COALESCE(SUM(duration_minutes),0),
+               COALESCE(SUM(sessions_count),0),
+               COALESCE(SUM(stacks_earned),0)
         FROM focus WHERE user_id=%s
     """, (user_id,))
     row = cursor.fetchone()
+
+    # Also get user's total stacks from users table
+    cursor.execute("SELECT stacks, streak FROM users WHERE user_id=%s", (user_id,))
+    user_row = cursor.fetchone()
     cursor.close()
     mydb.close()
 
     return jsonify({
-    'total_minutes':   row[0],
-    'total_sessions':  row[1],
-    'total_stacks':    row[2]
-})
+        'total_minutes':  float(row[0]) if row else 0,
+        'total_sessions': int(row[1])   if row else 0,
+        'session_stacks': int(row[2])   if row else 0,
+        'total_stacks':   int(user_row[0]) if user_row else 0,
+        'streak':         int(user_row[1]) if user_row else 0
+    })

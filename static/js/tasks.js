@@ -11,30 +11,31 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentDate = new Date();
     let editingTaskId = null;
     let selectedPriority = 'medium';
+    let activeFilter = 'all';
 
     // ── DOM Elements ──────────────────────────────────────────
-    const taskModal          = document.getElementById('taskModal');
-    const addTaskBtn         = document.getElementById('addTaskBtn');
-    const closeModalBtn      = document.getElementById('closeModalBtn');
-    const cancelBtn          = document.getElementById('cancelBtn');
-    const saveTaskBtn        = document.getElementById('saveTaskBtn');
-    const taskForm           = document.getElementById('taskForm');
-    const tasksList          = document.getElementById('tasksList');
-    const emptyState         = document.getElementById('emptyState');
-    const searchInput        = document.getElementById('searchInput');
-    const viewBtns           = document.querySelectorAll('.view-btn');
-    const filterChips        = document.querySelectorAll('.filter-chip');
-    const priorityOptions    = document.querySelectorAll('.priority-option');
-    const exportExcelBtn     = document.getElementById('exportExcelBtn');
+    const taskModal = document.getElementById('taskModal');
+    const addTaskBtn = document.getElementById('addTaskBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const saveTaskBtn = document.getElementById('saveTaskBtn');
+    const taskForm = document.getElementById('taskForm');
+    const tasksList = document.getElementById('tasksList');
+    const emptyState = document.getElementById('emptyState');
+    const searchInput = document.getElementById('searchInput');
+    const viewBtns = document.querySelectorAll('.view-btn');
+    const filterChips = document.querySelectorAll('.filter-chip');
+    const priorityOptions = document.querySelectorAll('.priority-option');
+    const exportExcelBtn = document.getElementById('exportExcelBtn');
 
     // Optional elements (header se aate hain — null safe)
-    const lightThemeBtn      = document.getElementById('lightThemeBtn');
-    const darkThemeBtn       = document.getElementById('darkThemeBtn');
-    const settingsBtnEl      = document.getElementById('settingsBtn');
+    const lightThemeBtn = document.getElementById('lightThemeBtn');
+    const darkThemeBtn = document.getElementById('darkThemeBtn');
+    const settingsBtnEl = document.getElementById('settingsBtn');
     const timeEstimateToggle = document.getElementById('timeEstimateToggle');
-    const pomodoroToggle     = document.getElementById('pomodoroToggle');
+    const pomodoroToggle = document.getElementById('pomodoroToggle');
     const timeEstimateInputs = document.getElementById('timeEstimateInputs');
-    const exportPdfBtn       = document.getElementById('exportPdfBtn');
+    const exportPdfBtn = document.getElementById('exportPdfBtn');
 
     // ── Init ──────────────────────────────────────────────────
     if (typeof loadUserProfile === 'function') loadUserProfile();
@@ -49,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const saved = localStorage.getItem('edulink_theme') || 'light';
         document.documentElement.setAttribute('data-theme', saved);
         if (saved === 'dark') {
-            if (darkThemeBtn)  darkThemeBtn.classList.add('active');
+            if (darkThemeBtn) darkThemeBtn.classList.add('active');
             if (lightThemeBtn) lightThemeBtn.classList.remove('active');
         }
     }
@@ -78,9 +79,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function setDefaultDateTime() {
-        const today   = new Date();
-        const dateEl  = document.getElementById('taskDate');
-        const timeEl  = document.getElementById('taskTime');
+        const today = new Date();
+        const dateEl = document.getElementById('taskDate');
+        const timeEl = document.getElementById('taskTime');
         if (dateEl) dateEl.value = today.toISOString().split('T')[0];
         if (timeEl) timeEl.value = today.toTimeString().slice(0, 5);
     }
@@ -92,16 +93,16 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!response.ok) throw new Error('Network response was not ok');
             const data = await response.json();
             tasks = data.map(task => ({
-                task_id:     task.task_id,
-                user_id:     task.user_id,
-                title:       task.title       || '',
+                task_id: task.task_id,
+                user_id: task.user_id,
+                title: task.title || '',
                 description: task.description || '',
-                date:        task.date        || '',
-                time:        task.time        || '',
-                recurring:   task.recurring   || 'once',
-                priority:    task.priority    || 'medium',
-                status:      task.status      || 'pending',
-                createdAt:   task.createdAt   || ''
+                date: task.date || '',
+                time: task.time || '',
+                recurring: task.recurring || 'once',
+                priority: task.priority || 'medium',
+                status: task.status || 'pending',
+                createdAt: task.createdAt || ''
             }));
             renderTasks();
             updateStats();
@@ -112,9 +113,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ── Modal ─────────────────────────────────────────────────
-    if (addTaskBtn)    addTaskBtn.addEventListener('click',    () => openModal('add'));
+    if (addTaskBtn) addTaskBtn.addEventListener('click', () => openModal('add'));
     if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
-    if (cancelBtn)     cancelBtn.addEventListener('click',     closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 
     window.addEventListener('click', (e) => {
         if (e.target === taskModal) closeModal();
@@ -135,11 +136,11 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('modalTitle').textContent = 'Edit Task';
             const task = tasks.find(t => t.task_id === taskId);
             if (task) {
-                document.getElementById('taskTitle').value       = task.title;
+                document.getElementById('taskTitle').value = task.title;
                 document.getElementById('taskDescription').value = task.description || '';
-                document.getElementById('taskDate').value        = task.date;
-                document.getElementById('taskTime').value        = task.time ? task.time.slice(0, 5) : '';
-                document.getElementById('taskRecurring').value   = task.recurring || 'once';
+                document.getElementById('taskDate').value = task.date;
+                document.getElementById('taskTime').value = task.time ? task.time.slice(0, 5) : '';
+                document.getElementById('taskRecurring').value = task.recurring || 'once';
                 selectedPriority = task.priority || 'medium';
                 updatePrioritySelection();
                 editingTaskId = taskId;
@@ -175,11 +176,11 @@ document.addEventListener('DOMContentLoaded', function () {
             e.preventDefault();
             e.stopPropagation();
 
-            const title       = document.getElementById('taskTitle').value.trim();
+            const title = document.getElementById('taskTitle').value.trim();
             const description = document.getElementById('taskDescription').value.trim();
-            const date        = document.getElementById('taskDate').value;
-            const time        = document.getElementById('taskTime').value;
-            const recurring   = document.getElementById('taskRecurring').value;
+            const date = document.getElementById('taskDate').value;
+            const time = document.getElementById('taskTime').value;
+            const recurring = document.getElementById('taskRecurring').value;
 
             if (!title || !date || !time) {
                 alert('Please fill in all required fields!');
@@ -191,18 +192,18 @@ document.addEventListener('DOMContentLoaded', function () {
             saveTaskBtn.textContent = 'Saving...';
 
             const formData = new FormData();
-            formData.append('taskTitle',       title);
+            formData.append('taskTitle', title);
             formData.append('taskDescription', description);
-            formData.append('taskDate',        date);
-            formData.append('taskTime',        time);
-            formData.append('taskRecurring',   recurring);
-            formData.append('taskPriority',    selectedPriority);
+            formData.append('taskDate', date);
+            formData.append('taskTime', time);
+            formData.append('taskRecurring', recurring);
+            formData.append('taskPriority', selectedPriority);
             if (editingTaskId) formData.append('task_id', editingTaskId);
 
             try {
                 const url = editingTaskId ? '/api/update-task' : '/api/save-task';
                 const response = await fetch(url, { method: 'POST', body: formData });
-                const result   = await response.json();
+                const result = await response.json();
 
                 if (result.success) {
                     await loadTasks();
@@ -227,19 +228,18 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ── Render Tasks ──────────────────────────────────────────
-    let activeFilter = 'all';
 
     function renderTasks(filter = activeFilter, searchQuery = '') {
         let filtered = [...tasks];
 
-        if (filter === 'pending')   filtered = filtered.filter(t => t.status === 'pending');
+        if (filter === 'pending') filtered = filtered.filter(t => t.status === 'pending');
         if (filter === 'completed') filtered = filtered.filter(t => t.status === 'completed');
-        if (filter === 'high')      filtered = filtered.filter(t => t.priority === 'high');
+        if (filter === 'high') filtered = filtered.filter(t => t.priority === 'high');
 
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             filtered = filtered.filter(t =>
-                (t.title       && t.title.toLowerCase().includes(q)) ||
+                (t.title && t.title.toLowerCase().includes(q)) ||
                 (t.description && t.description.toLowerCase().includes(q))
             );
         }
@@ -271,15 +271,15 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!isNaN(d)) {
                 dateDisplay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             }
-        } catch(e) {}
+        } catch (e) { }
 
         // Priority — None/null ke liye default
         const priority = (task.priority && task.priority !== 'None') ? task.priority : 'medium';
-        const status   = task.status || 'pending';
+        const status = task.status || 'pending';
 
         // Title — None/null ke liye default
         const title = (task.title && task.title !== 'None') ? task.title : '(No Title)';
-        const desc  = (task.description && task.description !== 'None') ? task.description : '';
+        const desc = (task.description && task.description !== 'None') ? task.description : '';
 
         return `
             <div class="task-item ${priority} ${status}" data-id="${task.task_id}">
@@ -312,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ── Global task action functions (onclick me use hoti hain) ──
-    window._toggleTask = function(taskId) {
+    window._toggleTask = function (taskId) {
         const task = tasks.find(t => t.task_id === taskId);
         if (!task) return;
         const newStatus = task.status === 'pending' ? 'completed' : 'pending';
@@ -322,21 +322,21 @@ document.addEventListener('DOMContentLoaded', function () {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `task_id=${taskId}&status=${newStatus}`
         })
-        .then(r => r.json())
-        .then(result => {
-            if (result.success) {
-                loadTasks();
-                showNotification(newStatus === 'completed' ? '✅ Task completed!' : '🔄 Task reopened!');
-            }
-        })
-        .catch(err => console.error('Toggle error:', err));
+            .then(r => r.json())
+            .then(result => {
+                if (result.success) {
+                    loadTasks();
+                    showNotification(newStatus === 'completed' ? '✅ Task completed!' : '🔄 Task reopened!');
+                }
+            })
+            .catch(err => console.error('Toggle error:', err));
     };
 
-    window._editTask = function(taskId) {
+    window._editTask = function (taskId) {
         openModal('edit', taskId);
     };
 
-    window._deleteTask = function(taskId) {
+    window._deleteTask = function (taskId) {
         if (!confirm('Are you sure you want to delete this task?')) return;
 
         fetch('/api/delete-task', {
@@ -344,38 +344,48 @@ document.addEventListener('DOMContentLoaded', function () {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `task_id=${taskId}`
         })
-        .then(r => r.json())
-        .then(result => {
-            if (result.status === 'deleted') {
-                loadTasks();
-                showNotification('🗑️ Task deleted!');
-            }
-        })
-        .catch(err => console.error('Delete error:', err));
+            .then(r => r.json())
+            .then(result => {
+                if (result.status === 'deleted') {
+                    loadTasks();
+                    showNotification('🗑️ Task deleted!');
+                }
+            })
+            .catch(err => console.error('Delete error:', err));
     };
 
     // ── Stats ─────────────────────────────────────────────────
     function updateStats() {
-        const total     = tasks.length;
+        const total = tasks.length;
         const completed = tasks.filter(t => t.status === 'completed').length;
-        const pending   = tasks.filter(t => t.status === 'pending').length;
-        const today     = new Date().toISOString().split('T')[0];
+        const pending = tasks.filter(t => t.status === 'pending').length;
+        const today = new Date().toISOString().split('T')[0];
         const todayCount = tasks.filter(t => t.date === today).length;
+        const streak = 0;
 
         const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-        set('totalTasksCount',     total);
+        set('totalTasksCount', total);
         set('completedTasksCount', completed);
-        set('pendingTasksCount',   pending);
-        set('todayTasksCount',     todayCount);
+        set('pendingTasksCount', pending);
+        set('todayTasksCount', todayCount);
+        set('streakCount', streak)
 
-        const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-        set('progressPercentage', pct + '%');
-
+        // Donut
+        const pct = d.percentage;
         const circle = document.getElementById('progressCircle');
-        if (circle) {
-            const circumference = 439.82;
-            circle.style.strokeDashoffset = circumference - (pct / 100) * circumference;
-        }
+        const circ = 2 * Math.PI * 35;
+        circle.style.strokeDasharray = circ;
+        circle.style.strokeDashoffset = circ - (circ * pct / 100);
+        document.getElementById('progressPercentage').textContent = pct + '%';
+
+        // const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+        // set('progressPercentage', pct + '%');
+
+        // const circle = document.getElementById('progressCircle');
+        // if (circle) {
+        //     const circumference = 439.82;
+        //     circle.style.strokeDashoffset = circumference - (pct / 100) * circumference;
+        // }
     }
 
     // ── Search ────────────────────────────────────────────────
@@ -416,8 +426,8 @@ document.addEventListener('DOMContentLoaded', function () {
         );
         if (target) target.classList.add('active');
 
-        if (view === 'daily')   renderDailyView();
-        if (view === 'weekly')  renderWeeklyView();
+        if (view === 'daily') renderDailyView();
+        if (view === 'weekly') renderWeeklyView();
         if (view === 'monthly') renderMonthlyView();
     }
 
@@ -479,7 +489,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div style="flex:1;min-width:0">
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
                         <span style="font-size:12px;color:var(--text-muted,#8892b0);font-weight:600">
-                            ${task.time ? task.time.slice(0,5) : '--:--'}
+                            ${task.time ? task.time.slice(0, 5) : '--:--'}
                         </span>
                         <span class="priority-badge priority-${task.priority || 'medium'}" style="font-size:11px">
                             ${(task.priority || 'medium').toUpperCase()}
@@ -539,14 +549,14 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderMonthlyView() {
         const monthGrid = document.getElementById('monthGrid');
         if (!monthGrid) return;
-        const year  = currentDate.getFullYear();
+        const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
-        const firstDay    = new Date(year, month, 1).getDay();
+        const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const todayStr    = new Date().toISOString().split('T')[0];
+        const todayStr = new Date().toISOString().split('T')[0];
         let html = '';
 
-        ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
+        ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(d => {
             html += `<div class="month-day-header" style="text-align:center;font-size:12px;font-weight:700;padding:8px 0;color:var(--text-muted,#8892b0)">${d}</div>`;
         });
 
@@ -556,12 +566,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         for (let day = 1; day <= daysInMonth; day++) {
-            const dateStr  = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-            const isToday  = dateStr === todayStr;
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const isToday = dateStr === todayStr;
 
             // ✅ FIX: Recurring tasks bhi include karo
             const dayTasks = getTasksForDate(dateStr);
-            const pending   = dayTasks.filter(t => t.status !== 'completed').length;
+            const pending = dayTasks.filter(t => t.status !== 'completed').length;
             const completed = dayTasks.filter(t => t.status === 'completed').length;
 
             html += `
@@ -577,11 +587,11 @@ document.addEventListener('DOMContentLoaded', function () {
                                 color:${isToday ? 'var(--primary,#5e72e4)' : 'var(--text-primary,#fff)'};
                                 margin-bottom:4px">${day}</div>
                     <div style="display:flex;flex-wrap:wrap;gap:3px">
-                        ${pending   > 0 ? `<span style="font-size:10px;background:rgba(94,114,228,0.25);color:#5e72e4;padding:1px 5px;border-radius:4px;font-weight:600">${pending}p</span>` : ''}
+                        ${pending > 0 ? `<span style="font-size:10px;background:rgba(94,114,228,0.25);color:#5e72e4;padding:1px 5px;border-radius:4px;font-weight:600">${pending}p</span>` : ''}
                         ${completed > 0 ? `<span style="font-size:10px;background:rgba(45,206,177,0.2);color:#2dceb1;padding:1px 5px;border-radius:4px;font-weight:600">${completed}✓</span>` : ''}
                     </div>
                     <div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:2px">
-                        ${dayTasks.slice(0,3).map(t => `<div style="width:6px;height:6px;border-radius:50%;background:${t.priority==='high'?'#f5365c':t.priority==='low'?'#2dceb1':'#fb6340'}"></div>`).join('')}
+                        ${dayTasks.slice(0, 3).map(t => `<div style="width:6px;height:6px;border-radius:50%;background:${t.priority === 'high' ? '#f5365c' : t.priority === 'low' ? '#2dceb1' : '#fb6340'}"></div>`).join('')}
                     </div>
                 </div>`;
         }
@@ -595,8 +605,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (!task.recurring || task.recurring === 'once') return false;
 
-            const taskDate   = new Date(task.date);
-            const checkDate  = new Date(dateStr);
+            const taskDate = new Date(task.date);
+            const checkDate = new Date(dateStr);
             if (checkDate < taskDate) return false;  // Future date, skip
 
             if (task.recurring === 'daily') return true;  // Har din
@@ -611,7 +621,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (task.recurring === 'yearly') {
                 return taskDate.getDate() === checkDate.getDate() &&
-                       taskDate.getMonth() === checkDate.getMonth();
+                    taskDate.getMonth() === checkDate.getMonth();
             }
 
             return false;
@@ -619,21 +629,21 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ── Calendar Navigation ───────────────────────────────────
-    const prevBtn  = document.getElementById('prevBtn');
-    const nextBtn  = document.getElementById('nextBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
     const todayBtn = document.getElementById('todayBtn');
 
     if (prevBtn) prevBtn.addEventListener('click', () => {
-        if (currentView === 'daily')   currentDate.setDate(currentDate.getDate() - 1);
-        if (currentView === 'weekly')  currentDate.setDate(currentDate.getDate() - 7);
+        if (currentView === 'daily') currentDate.setDate(currentDate.getDate() - 1);
+        if (currentView === 'weekly') currentDate.setDate(currentDate.getDate() - 7);
         if (currentView === 'monthly') currentDate.setMonth(currentDate.getMonth() - 1);
         switchView(currentView);
         updateCalendarTitle();
     });
 
     if (nextBtn) nextBtn.addEventListener('click', () => {
-        if (currentView === 'daily')   currentDate.setDate(currentDate.getDate() + 1);
-        if (currentView === 'weekly')  currentDate.setDate(currentDate.getDate() + 7);
+        if (currentView === 'daily') currentDate.setDate(currentDate.getDate() + 1);
+        if (currentView === 'weekly') currentDate.setDate(currentDate.getDate() + 7);
         if (currentView === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1);
         switchView(currentView);
         updateCalendarTitle();
@@ -647,7 +657,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Export ────────────────────────────────────────────────
     if (exportExcelBtn) exportExcelBtn.addEventListener('click', exportToExcel);
-    if (exportPdfBtn)   exportPdfBtn.addEventListener('click',   exportToPDF);
+    if (exportPdfBtn) exportPdfBtn.addEventListener('click', exportToPDF);
 
     function exportToExcel() {
         if (tasks.length === 0) { alert('No tasks to export!'); return; }
@@ -676,8 +686,8 @@ document.addEventListener('DOMContentLoaded', function () {
         <p>Generated: ${new Date().toLocaleDateString()}</p>
         <table><thead><tr><th>Title</th><th>Date</th><th>Time</th><th>Priority</th><th>Status</th><th>Description</th></tr></thead><tbody>`;
         tasks.forEach(t => {
-            html += `<tr><td>${t.title}</td><td>${t.date}</td><td>${t.time ? t.time.slice(0,5) : ''}</td>
-            <td>${t.priority.toUpperCase()}</td><td>${t.status.toUpperCase()}</td><td>${t.description||'-'}</td></tr>`;
+            html += `<tr><td>${t.title}</td><td>${t.date}</td><td>${t.time ? t.time.slice(0, 5) : ''}</td>
+            <td>${t.priority.toUpperCase()}</td><td>${t.status.toUpperCase()}</td><td>${t.description || '-'}</td></tr>`;
         });
         html += `</tbody></table></body></html>`;
         win.document.write(html);
@@ -717,7 +727,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // ✅ Monthly view se click karke daily view pe jaao
-    window._jumpToDay = function(dateStr) {
+    window._jumpToDay = function (dateStr) {
         currentDate = new Date(dateStr + 'T12:00:00');
         currentView = 'daily';
         viewBtns.forEach(b => {

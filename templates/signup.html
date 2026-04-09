@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/signup.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
 </head>
 <body>
     <div class="signup-container">
@@ -18,7 +19,7 @@
             <div class="back-page">
                 <a href="{{ url_for('auth.index') }}"><i class="fa-solid fa-arrow-left"></i> Back</a>
             </div>
-            
+
             <div class="signup-header">
                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="EduLink Logo" class="signup-logo">
                 <h1 class="signup-title">Create Your Account</h1>
@@ -85,8 +86,35 @@
                         <label for="whatsapp">WhatsApp <span style="color:var(--accent-2)">*</span></label>
                         <div class="input-icon">
                             <i class="fab fa-whatsapp"></i>
-                            <input type="number" id="whatsapp" name="whatsapp" required placeholder="WhatsApp number" pattern="[0-9]{10}">
+                            <input type="number" id="whatsapp" name="whatsapp" required placeholder="WhatsApp number">
                         </div>
+                    </div>
+                </div>
+
+                <!-- Profession Tag (Rule 4) -->
+                <div class="form-group">
+                    <label for="profession">I am a... <span style="color:var(--accent-2)">*</span></label>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;" id="professionSelector">
+                        <label class="profession-radio-label" data-value="Student">
+                            <input type="radio" name="profession" value="Student" checked style="display:none">
+                            <span class="profession-badge badge-student" style="cursor:pointer;padding:8px 16px;font-size:13px;">📚 Student</span>
+                        </label>
+                        <label class="profession-radio-label" data-value="Teacher">
+                            <input type="radio" name="profession" value="Teacher" style="display:none">
+                            <span class="profession-badge badge-teacher" style="cursor:pointer;padding:8px 16px;font-size:13px;opacity:0.5;">🎓 Teacher</span>
+                        </label>
+                        <label class="profession-radio-label" data-value="Individual">
+                            <input type="radio" name="profession" value="Individual" style="display:none">
+                            <span class="profession-badge badge-individual" style="cursor:pointer;padding:8px 16px;font-size:13px;opacity:0.5;">👤 Individual</span>
+                        </label>
+                        <label class="profession-radio-label" data-value="Professional">
+                            <input type="radio" name="profession" value="Professional" style="display:none">
+                            <span class="profession-badge badge-professional" style="cursor:pointer;padding:8px 16px;font-size:13px;opacity:0.5;">💼 Professional</span>
+                        </label>
+                        <label class="profession-radio-label" data-value="Other">
+                            <input type="radio" name="profession" value="Other" style="display:none">
+                            <span class="profession-badge badge-other" style="cursor:pointer;padding:8px 16px;font-size:13px;opacity:0.5;">⭐ Other</span>
+                        </label>
                     </div>
                 </div>
 
@@ -118,5 +146,18 @@
         </div>
     </div>
     <script src="{{ url_for('static', filename='js/signup.js') }}"></script>
+    <script>
+        // Profession radio selector
+        document.querySelectorAll('.profession-radio-label').forEach(label => {
+            label.addEventListener('click', function() {
+                // Dim all
+                document.querySelectorAll('.profession-radio-label span').forEach(s => s.style.opacity = '0.5');
+                // Brighten selected
+                this.querySelector('span').style.opacity = '1';
+                // Check radio
+                this.querySelector('input[type=radio]').checked = true;
+            });
+        });
+    </script>
 </body>
 </html>

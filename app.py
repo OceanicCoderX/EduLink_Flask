@@ -1,19 +1,37 @@
 # ============================================================
 # app.py — EduLink Main Flask App
-# Yahan sab routes register hote hain aur SocketIO start hota hai
+# Updated: MAX_CONTENT_LENGTH for file uploads, Flask-Mail config
 # ============================================================
 
 from flask import Flask
 from flask_socketio import SocketIO
-from config import SECRET_KEY
+from config import (SECRET_KEY, MAX_CONTENT_LENGTH,
+                    MAIL_SERVER, MAIL_PORT, MAIL_USE_TLS,
+                    MAIL_USERNAME, MAIL_PASSWORD, MAIL_DEFAULT_SENDER,
+                    UPLOAD_FOLDER)
+import os
 
 # --- App Initialize ---
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 
+# --- File Upload Config ---
+app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
+app.config['UPLOAD_FOLDER']      = UPLOAD_FOLDER
+
+# --- Flask-Mail Config ---
+app.config['MAIL_SERVER']         = MAIL_SERVER
+app.config['MAIL_PORT']           = MAIL_PORT
+app.config['MAIL_USE_TLS']        = MAIL_USE_TLS
+app.config['MAIL_USERNAME']       = MAIL_USERNAME
+app.config['MAIL_PASSWORD']       = MAIL_PASSWORD
+app.config['MAIL_DEFAULT_SENDER'] = MAIL_DEFAULT_SENDER
+
 # --- SocketIO Initialize (real-time chat ke liye) ---
-# async_mode='threading' — XAMPP/Windows pe kaam karta hai
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+
+# --- Ensure upload directory exists ---
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # --- Import & Register all route blueprints ---
 from routes.auth       import auth_bp
@@ -37,7 +55,7 @@ app.register_blueprint(community_bp)
 app.register_blueprint(friends_bp)
 
 # --- SocketIO Events Import (must be after socketio is created) ---
-import socket_events   # noqa: F401  — yeh file events handle karti hai
+import socket_events   # noqa: F401
 
 # --- Run ---
 if __name__ == "__main__":

@@ -1,11 +1,13 @@
 # ============================================================
 # routes/tasks.py — Tasks Page + CRUD APIs
+# Updated: awards +1 Stack on task completion
 # ============================================================
 
 from flask import Blueprint, render_template, request, session, redirect, url_for, jsonify
 from db import get_db_connection
 from datetime import date
 from functools import wraps
+from helpers.stacks import award_stack, log_activity
 
 tasks_bp = Blueprint('tasks', __name__)
 
@@ -25,7 +27,7 @@ def tasks():
     return render_template('pages/tasks.html', user=session)
 
 
-# Insert Task
+# ── GET all tasks ────────────────────────────────────────────
 
 @tasks_bp.route('/api/tasks', methods=['GET'])
 @login_required
@@ -37,35 +39,38 @@ def get_tasks():
 
     try:
         cursor.execute(
-            "SELECT task_id, user_id, task_title, task_description, due_date, due_time, recurring, priority, status, created_date FROM tasks WHERE user_id=%s ORDER BY due_date ASC, due_time ASC",
+            """SELECT task_id, user_id, task_title, task_description,
+                      due_date, due_time, recurring, priority, status, created_date
+               FROM tasks WHERE user_id=%s
+               ORDER BY due_date ASC, due_time ASC""",
             (user_id,)
         )
         rows = cursor.fetchall()
         cursor.close()
         mydb.close()
 
-        task_list = []
-        for t in rows:
-            task_list.append({
-                'task_id':     t[0],
-                'user_id':     t[1],
-                'title':       t[2] or '',
-                'description': t[3] if t[3] and t[3] != 'None' else '',
-                'date':        str(t[4]) if t[4] else '',
-                'time':        str(t[5]) if t[5] else '',
-                'recurring':   t[6] or 'once',
-                'priority':    t[7] if t[7] and t[7] != 'None' else 'medium',
-                'status':      t[8] or 'pending',
-                'createdAt':   str(t[9]) if t[9] else ''
-            })
+        task_list = [{
+            'task_id':     t[0],
+            'user_id':     t[1],
+            'title':       t[2] or '',
+            'description': t[3] if t[3] and t[3] != 'None' else '',
+            'date':        str(t[4]) if t[4] else '',
+            'time':        str(t[5]) if t[5] else '',
+            'recurring':   t[6] or 'once',
+            'priority':    t[7] if t[7] and t[7] != 'None' else 'medium',
+            'status':      t[8] or 'pending',
+            'createdAt':   str(t[9]) if t[9] else ''
+        } for t in rows]
+
         return jsonify(task_list)
+
     except Exception as e:
         import traceback
-        with open("tasks_api_error.txt", "w") as f:
-            f.write(traceback.format_exc())
+        traceback.print_exc()
         return jsonify([])
 
-# Save Task
+
+# ── Save Task ────────────────────────────────────────────────
 
 @tasks_bp.route('/api/save-task', methods=['POST'])
 @login_required
@@ -78,31 +83,32 @@ def save_task():
     due_time         = request.form.get('taskTime')
     recurring        = request.form.get('taskRecurring', 'once')
     priority         = request.form.get('taskPriority', 'medium')
-    status           = 'pending'
     created_date     = date.today()
 
     mydb   = get_db_connection()
     cursor = mydb.cursor()
 
-    query = """
+    cursor.execute("""
         INSERT INTO tasks
         (user_id, task_title, task_description, due_date, due_time, recurring, priority, status, created_date)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """
-    cursor.execute(query, (user_id, task_title, task_description, due_date, due_time, recurring, priority, status, created_date))
+        VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending', %s)
+    """, (user_id, task_title, task_description, due_date, due_time, recurring, priority, created_date))
+
     mydb.commit()
     task_id = cursor.lastrowid
     cursor.close()
     mydb.close()
 
+    log_activity(user_id, 'task', f'Created task "{task_title}"')
     return jsonify({"success": True, "task_id": task_id, "message": "Task saved!"})
 
-# Upadate task
+
+# ── Update Status (Complete/Pending) ─────────────────────────
 
 @tasks_bp.route('/api/update-task-status', methods=['POST'])
 @login_required
 def update_task_status():
-    """Task ka status complete/pending toggle karo."""
+    """Task ka status complete/pending toggle karo. +1 Stack on complete."""
     task_id    = request.form.get('task_id')
     new_status = request.form.get('status')
     user_id    = session['user_id']
@@ -110,24 +116,42 @@ def update_task_status():
     mydb   = get_db_connection()
     cursor = mydb.cursor()
 
+    # Get task title for activity log
+    cursor.execute("SELECT task_title FROM tasks WHERE task_id=%s AND user_id=%s", (task_id, user_id))
+    row = cursor.fetchone()
+    task_title = row[0] if row else 'Task'
+
     if new_status == 'completed':
         cursor.execute(
             "UPDATE tasks SET status='completed', completed_date=CURDATE() WHERE task_id=%s AND user_id=%s",
             (task_id, user_id)
         )
+        mydb.commit()
+        cursor.close()
+        mydb.close()
+
+        # Award +1 Stack
+        result = award_stack(user_id, 'task_complete', 1)
+        log_activity(user_id, 'task', f'Completed task "{task_title}"')
+        session['stacks'] = result.get('new_total', session.get('stacks', 0))
+
+        return jsonify({
+            "success":   True,
+            "stack_awarded": True,
+            "new_stacks": result.get('new_total', 0)
+        })
     else:
         cursor.execute(
             "UPDATE tasks SET status='pending', completed_date='0000-00-00' WHERE task_id=%s AND user_id=%s",
             (task_id, user_id)
         )
-
-    mydb.commit()
-    cursor.close()
-    mydb.close()
-
-    return jsonify({"success": True})
+        mydb.commit()
+        cursor.close()
+        mydb.close()
+        return jsonify({"success": True, "stack_awarded": False})
 
 
+# ── Edit Task ────────────────────────────────────────────────
 
 @tasks_bp.route('/api/update-task', methods=['POST'])
 @login_required
@@ -147,8 +171,8 @@ def update_task():
 
     cursor.execute("""
         UPDATE tasks
-        SET task_title=%s, task_description=%s, due_date=%s, due_time=%s,
-            recurring=%s, priority=%s
+        SET task_title=%s, task_description=%s, due_date=%s,
+            due_time=%s, recurring=%s, priority=%s
         WHERE task_id=%s AND user_id=%s
     """, (task_title, task_description, due_date, due_time, recurring, priority, task_id, user_id))
 
@@ -159,7 +183,7 @@ def update_task():
     return jsonify({"success": True})
 
 
-# Delete task
+# ── Delete Task ──────────────────────────────────────────────
 
 @tasks_bp.route('/api/delete-task', methods=['POST'])
 @login_required
@@ -176,3 +200,18 @@ def delete_task():
     mydb.close()
 
     return jsonify({"success": True})
+
+
+# ── Stack Award (Focus interval ping from JS) ────────────────
+
+@tasks_bp.route('/api/award-focus-interval', methods=['POST'])
+@login_required
+def award_focus_interval():
+    """
+    JS se har 10 minute par call hota hai.
+    Rule 8a: +1 Stack per 10 minutes of continuous activity.
+    """
+    user_id = session['user_id']
+    result  = award_stack(user_id, 'focus_interval', 1)
+    session['stacks'] = result.get('new_total', session.get('stacks', 0))
+    return jsonify(result)

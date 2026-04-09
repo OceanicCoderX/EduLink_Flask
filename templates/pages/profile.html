@@ -1,24 +1,58 @@
-{% extends "base.html" %} {% block title %}Profile - EduLink{% endblock %} {%
-block extra_css %}
-<link
-  rel="stylesheet"
-  href="{{ url_for('static', filename='css/profile.css') }}"
-/>
-{% endblock %} {% block content %}
+{% extends "base.html" %} {% block title %}Profile - EduLink{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+<style>
+  /* ── Inline Profile Additions ── */
+  .followers-section { display:flex; gap:32px; margin-top:16px; }
+  .follow-stat { text-align:center; cursor:pointer; }
+  .follow-stat-value { font-size:22px; font-weight:700; color:var(--text-primary); }
+  .follow-stat-label { font-size:12px; color:var(--text-muted); }
+  .follow-stat:hover .follow-stat-value { color:var(--primary); }
+
+  .stacks-display {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 16px; border-radius:20px;
+    background:linear-gradient(135deg,rgba(251,137,64,0.1),rgba(245,73,74,0.1));
+    border:1px solid rgba(251,137,64,0.3);
+    font-weight:700; color:#fb8940; font-size:14px; margin-top:12px;
+  }
+  .streak-display {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 16px; border-radius:20px;
+    background:linear-gradient(135deg,rgba(94,114,228,0.1),rgba(45,206,177,0.1));
+    border:1px solid rgba(94,114,228,0.2);
+    font-weight:700; color:var(--primary); font-size:14px; margin-top:8px;
+  }
+
+  /* Password modal form */
+  .pwd-group { margin-bottom:16px; }
+  .pwd-group label { display:block; font-size:13px; font-weight:500; margin-bottom:6px; color:var(--text-primary); }
+  .pwd-group input { width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:8px;
+    background:var(--bg-primary); color:var(--text-primary); font-size:14px; }
+  .pwd-group input:focus { outline:none; border-color:var(--primary); }
+
+  /* Delete confirmation */
+  .delete-confirm-input {
+    width:100%; padding:10px 14px; border:2px solid rgba(245,73,74,0.4); border-radius:8px;
+    background:var(--bg-primary); color:var(--text-primary); font-size:14px;
+    text-align:center; font-weight:600; letter-spacing:2px;
+    margin-top:12px;
+  }
+  .delete-confirm-input:focus { outline:none; border-color:#f5494a; }
+</style>
+{% endblock %}
+
+{% block content %}
 <main class="main-content">
   <!-- Profile Banner -->
   <div class="profile-header-banner">
-    <img
-      id="backgroundImage"
-      class="profile-bg-image"
+    <img id="backgroundImage" class="profile-bg-image"
       {% if 'default' in profile.bg_pic %}
         src="{{ url_for('static', filename='images/background/' + profile.bg_pic) }}"
       {% else %}
         src="{{ url_for('static', filename='images/background/' + profile.user_id|string + '/' + profile.bg_pic) }}"
       {% endif %}
-      onerror="this.style.display = 'none'"
-      alt=""
-    />
+      onerror="this.style.display='none'" alt="">
     <div class="profile-bg-overlay"></div>
     <button class="change-bg-btn" onclick="changeBackground()">
       <i class="fas fa-camera"></i> Change Cover
@@ -30,12 +64,15 @@ block extra_css %}
     <!-- Main Profile Card -->
     <div class="profile-main-card">
       <div class="profile-top-section">
+
         <!-- Avatar Section -->
         <div class="profile-avatar-section">
-          <div class="profile-avatar-large" id="mainAvatar">
+          <div class="profile-avatar-large" id="mainAvatar"
+               data-avatar-id="{{ profile.avatar_id }}"
+               data-initials="{{ profile.profilename[0]|upper }}">
             {{ profile.profilename[0]|upper }}
           </div>
-          <button class="avatar-upload-btn" onclick="openAvatarModal()">
+          <button class="avatar-upload-btn" onclick="openModal('avatarModal')">
             <i class="fas fa-camera"></i>
           </button>
         </div>
@@ -43,52 +80,55 @@ block extra_css %}
         <!-- Profile Details -->
         <div class="profile-details">
           <div class="profile-name-section">
-            <h1 class="profile-name-large" id="displayName">
-              {{ profile.profilename }}
-            </h1>
-            <span class="verified-badge" title="Verified Account">
-              <i class="fas fa-check"></i>
+            <h1 class="profile-name-large" id="displayName">{{ profile.profilename }}</h1>
+            <span class="verified-badge" title="Verified Account"><i class="fas fa-check"></i></span>
+          </div>
+          <p class="profile-username" id="displayUsername">@{{ profile.username }}</p>
+
+          <!-- Profession Badge -->
+          <div style="margin:8px 0;">
+            {% set pclass = {
+                'Student':      'badge-student',
+                'Teacher':      'badge-teacher',
+                'Individual':   'badge-individual',
+                'Professional': 'badge-professional',
+                'Other':        'badge-other'
+            } %}
+            {% set picon = {'Student':'📚','Teacher':'🎓','Individual':'👤','Professional':'💼','Other':'⭐'} %}
+            <span class="profession-badge {{ pclass.get(profile.profession, 'badge-other') }}" id="professionBadge">
+              {{ picon.get(profile.profession, '⭐') }} {{ profile.profession }}
             </span>
           </div>
-          <p class="profile-username" id="displayUsername">
-            @{{ profile.username }}
-          </p>
+
           <p class="profile-bio" id="displayBio">{{ profile.bio }}</p>
 
           <div class="profile-meta">
-            <div class="profile-meta-item">
-              <i class="fas fa-envelope"></i><span>{{ profile.email }}</span>
+            <div class="profile-meta-item"><i class="fas fa-envelope"></i><span>{{ profile.email }}</span></div>
+            <div class="profile-meta-item"><i class="fab fa-whatsapp"></i><span>{{ profile.whatsapp }}</span></div>
+            <div class="profile-meta-item"><i class="fas fa-calendar-alt"></i><span>Joined {{ profile.created_date }}</span></div>
+          </div>
+
+          <!-- Stacks & Streak -->
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;">
+            <div class="stacks-display">
+              <i class="fas fa-layer-group"></i>
+              <span id="profileStackCount">{{ profile.stacks }}</span> Stacks
             </div>
-            <div class="profile-meta-item">
-              <i class="fab fa-whatsapp"></i><span>{{ profile.whatsapp }}</span>
-            </div>
-            <div class="profile-meta-item">
-              <i class="fas fa-calendar-alt"></i
-              ><span>Joined {{ profile.created_date }}</span>
+            <div class="streak-display">
+              <i class="fas fa-fire"></i>
+              <span id="profileStreakCount">{{ profile.streak }}</span> Day Streak
             </div>
           </div>
 
-          <!-- Stats -->
-          <div
-            class="profile-stats"
-            style="display: flex; gap: 20px; margin-top: 16px"
-          >
-            <!-- Social Stats -->
-            <div class="social-stats">
-              <div
-                class="social-stat"
-                onclick="alert('Followers feature coming soon!')"
-              >
-                <div class="social-stat-value">1.2K</div>
-                <div class="social-stat-label">Followers</div>
-              </div>
-              <div
-                class="social-stat"
-                onclick="alert('Following feature coming soon!')"
-              >
-                <div class="social-stat-value">345</div>
-                <div class="social-stat-label">Following</div>
-              </div>
+          <!-- Followers / Following -->
+          <div class="followers-section">
+            <div class="follow-stat" id="followersBlock">
+              <div class="follow-stat-value" id="followersCount">{{ profile.followers }}</div>
+              <div class="follow-stat-label">Followers</div>
+            </div>
+            <div class="follow-stat" id="followingBlock">
+              <div class="follow-stat-value" id="followingCount">{{ profile.following }}</div>
+              <div class="follow-stat-label">Following</div>
             </div>
           </div>
         </div>
@@ -97,16 +137,13 @@ block extra_css %}
       <!-- Action Buttons -->
       <div class="profile-actions">
         <button class="action-btn btn-primary" onclick="scrollToEdit()">
-          <i class="fas fa-edit"></i>
-          Edit Profile
+          <i class="fas fa-edit"></i> Edit Profile
         </button>
         <button class="action-btn btn-secondary" onclick="shareProfile()">
-          <i class="fas fa-share-alt"></i>
-          Share Profile
+          <i class="fas fa-share-alt"></i> Share Profile
         </button>
-        <button class="action-btn btn-secondary" onclick="openExportModal()">
-          <i class="fas fa-download"></i>
-          Export Data
+        <button class="action-btn btn-secondary" onclick="openModal('exportModal')">
+          <i class="fas fa-download"></i> Export Data
         </button>
       </div>
     </div>
@@ -114,90 +151,61 @@ block extra_css %}
     <!-- Content Grid -->
     <div class="content-grid">
       <!-- Personal Information -->
-      <div class="content-card">
+      <div class="content-card" id="editSection">
         <div class="content-card-header">
-          <h2 class="content-card-title">
-            <i class="fas fa-user"></i>
-            Personal Information
-          </h2>
+          <h2 class="content-card-title"><i class="fas fa-user"></i> Personal Information</h2>
         </div>
         <form class="info-form" id="personalInfoForm">
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Full Name</label>
-              <input
-                type="text"
-                class="form-input"
-                id="fullName"
-                name="profilename"
-                value="{{ profile.profilename }}"
-              />
+              <input type="text" class="form-input" id="fullName" name="profilename" value="{{ profile.profilename }}">
             </div>
             <div class="form-group">
               <label class="form-label">Username</label>
-              <input
-                type="text"
-                class="form-input"
-                id="username"
-                name="username"
-                value="{{ profile.username }}"
-              />
+              <input type="text" class="form-input" id="username" name="username" value="{{ profile.username }}">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Email Address</label>
-              <input
-                type="email"
-                class="form-input"
-                id="email"
-                name="email"
-                value="{{ profile.email }}"
-              />
+              <input type="email" class="form-input" id="email" name="email" value="{{ profile.email }}" disabled>
             </div>
             <div class="form-group">
-              <label class="form-label">Phone Number</label>
-              <input
-                type="tel"
-                class="form-input"
-                id="phone"
-                name="whatsapp"
-                value="{{ profile.whatsapp }}"
-              />
+              <label class="form-label">WhatsApp Number</label>
+              <input type="tel" class="form-input" id="phone" name="whatsapp" value="{{ profile.whatsapp }}">
             </div>
+          </div>
+
+          <!-- Profession Selector -->
+          <div class="form-group">
+            <label class="form-label">Profession</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;" id="editProfessionSelector">
+              {% for p, cls, icon in [('Student','badge-student','📚'),('Teacher','badge-teacher','🎓'),('Individual','badge-individual','👤'),('Professional','badge-professional','💼'),('Other','badge-other','⭐')] %}
+              <span class="profession-badge {{ cls }} edit-profession-btn"
+                    data-value="{{ p }}"
+                    style="cursor:pointer;padding:7px 14px;font-size:13px;{% if profile.profession != p %}opacity:0.4;{% endif %}"
+                    onclick="selectEditProfession('{{ p }}')">
+                {{ icon }} {{ p }}
+              </span>
+              {% endfor %}
+            </div>
+            <input type="hidden" id="editProfessionInput" name="profession" value="{{ profile.profession }}">
           </div>
 
           <div class="form-group">
             <label class="form-label">Bio</label>
             <textarea class="form-input" id="bio" name="bio" maxlength="250">{{ profile.bio }}</textarea>
-            <small style="color: var(--text-muted)">
-              <span id="bioCharCount">67</span>/250 characters
-            </small>
+            <small style="color:var(--text-muted)"><span id="bioCharCount">{{ profile.bio|length }}</span>/250 characters</small>
           </div>
           <div class="form-group">
             <label class="form-label">User ID (Cannot be changed)</label>
-            <input
-              type="text"
-              class="form-input"
-              value="{{ profile.user_id }}"
-              disabled
-            />
+            <input type="text" class="form-input" value="{{ profile.user_id }}" disabled>
           </div>
-          <div style="display: flex; gap: 12px; justify-content: flex-end">
-            <button
-              type="button"
-              class="action-btn btn-secondary"
-              onclick="cancelEdit()"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              onclick="saveProfile()"
-              class="action-btn btn-primary"
-            >
-              <i class="fas fa-save"></i>
-              Save Changes
+          <div style="display:flex;gap:12px;justify-content:flex-end">
+            <button type="button" class="action-btn btn-secondary" onclick="cancelEdit()">Cancel</button>
+            <button type="button" class="action-btn btn-primary" onclick="saveProfile()">
+              <i class="fas fa-save"></i> Save Changes
             </button>
           </div>
         </form>
@@ -206,222 +214,176 @@ block extra_css %}
       <!-- Recent Activity -->
       <div class="content-card">
         <div class="content-card-header">
-          <h2 class="content-card-title">
-            <i class="fas fa-history"></i>
-            Recent Activity
-          </h2>
-          <span
-            class="content-card-action"
-            onclick="alert('View all activity coming soon!')"
-          >
-            View All
-          </span>
+          <h2 class="content-card-title"><i class="fas fa-history"></i> Recent Activity</h2>
         </div>
-        <div class="activity-list">
-          <div class="activity-item">
-            <div class="activity-icon pomodoro">
-              <i class="fas fa-clock"></i>
-            </div>
-            <div class="activity-content">
-              <div class="activity-title">Completed 50/10 Pomodoro session</div>
-              <div class="activity-time">2 hours ago</div>
-            </div>
-          </div>
-          <div class="activity-item">
-            <div class="activity-icon task">
-              <i class="fas fa-check"></i>
-            </div>
-            <div class="activity-content">
-              <div class="activity-title">Completed task "Study Chapter 5"</div>
-              <div class="activity-time">5 hours ago</div>
-            </div>
-          </div>
-          <div class="activity-item">
-            <div class="activity-icon note">
-              <i class="fas fa-book"></i>
-            </div>
-            <div class="activity-content">
-              <div class="activity-title">Created "Physics Notes"</div>
-              <div class="activity-time">Yesterday</div>
-            </div>
-          </div>
-          <div class="activity-item">
-            <div class="activity-icon achievement">
-              <i class="fas fa-trophy"></i>
-            </div>
-            <div class="activity-content">
-              <div class="activity-title">
-                Unlocked "7-Day Streak" achievement
+        <div class="activity-list" id="activityList">
+          {% if recent_activity %}
+            {% for act in recent_activity %}
+            <div class="activity-item">
+              <div class="activity-icon {% if act.type == 'stack' %}achievement{% elif act.type == 'task' %}task{% elif act.type == 'focus' %}pomodoro{% elif act.type == 'note' or act.type == 'upload' %}note{% else %}task{% endif %}">
+                <i class="fas {% if act.type == 'stack' %}fa-trophy{% elif act.type == 'task' %}fa-check{% elif act.type == 'focus' %}fa-clock{% elif act.type == 'note' %}fa-book{% elif act.type == 'upload' %}fa-upload{% elif act.type == 'room' %}fa-users{% elif act.type == 'security' %}fa-shield-alt{% else %}fa-circle{% endif %}"></i>
               </div>
-              <div class="activity-time">2 days ago</div>
+              <div class="activity-content">
+                <div class="activity-title">{{ act.desc }}</div>
+                <div class="activity-time">{{ act.time }}</div>
+              </div>
             </div>
-          </div>
-          <div class="activity-item">
-            <div class="activity-icon task">
-              <i class="fas fa-share"></i>
+            {% endfor %}
+          {% else %}
+            <div style="text-align:center;padding:24px;color:var(--text-muted);">
+              <i class="fas fa-history" style="font-size:32px;margin-bottom:8px;opacity:0.3;"></i>
+              <p>No activity yet. Start using EduLink!</p>
             </div>
-            <div class="activity-content">
-              <div class="activity-title">Shared note with community</div>
-              <div class="activity-time">3 days ago</div>
-            </div>
-          </div>
+          {% endif %}
         </div>
       </div>
     </div>
 
-    <!-- Settings -->
+    <!-- Settings & Preferences -->
     <div class="content-card">
       <div class="content-card-header">
-        <h2 class="content-card-title">
-          <i class="fas fa-cog"></i>
-          Settings & Preferences
-        </h2>
+        <h2 class="content-card-title"><i class="fas fa-cog"></i> Settings &amp; Preferences</h2>
       </div>
 
+      <!-- Notifications -->
       <div class="settings-group">
         <h3 class="settings-group-title">Notifications</h3>
         <div class="setting-item">
           <span class="setting-label">Email Notifications</span>
-          <div class="toggle-switch active" onclick="toggleSetting(this)"></div>
+          <div class="toggle-switch {% if profile.email_notif %}active{% endif %}"
+               id="emailNotifToggle" onclick="toggleSettingSwitch(this, 'email_notif')"></div>
         </div>
         <div class="setting-item">
-          <span class="setting-label">WhatsApp Reminders</span>
-          <div class="toggle-switch active" onclick="toggleSetting(this)"></div>
+          <span class="setting-label">WhatsApp Notifications</span>
+          <div class="toggle-switch {% if profile.whatsapp_notif %}active{% endif %}"
+               id="whatsappNotifToggle" onclick="toggleSettingSwitch(this, 'whatsapp_notif')"></div>
         </div>
         <div class="setting-item">
-          <span class="setting-label">Browser Notifications</span>
-          <div class="toggle-switch" onclick="toggleSetting(this)"></div>
+          <span class="setting-label">Notification Channel</span>
+          <select class="form-input" style="width:auto;" id="notifChannelSelect"
+                  onchange="saveSettingsDirect()">
+            <option value="email"    {% if profile.notif_channel == 'email'    %}selected{% endif %}>Email Only</option>
+            <option value="whatsapp" {% if profile.notif_channel == 'whatsapp' %}selected{% endif %}>WhatsApp Only</option>
+            <option value="both"     {% if profile.notif_channel == 'both'     %}selected{% endif %}>Both</option>
+            <option value="none"     {% if profile.notif_channel == 'none'     %}selected{% endif %}>None</option>
+          </select>
         </div>
       </div>
 
+      <!-- Privacy -->
       <div class="settings-group">
         <h3 class="settings-group-title">Privacy</h3>
         <div class="setting-item">
-          <span class="setting-label">Public Profile</span>
-          <select class="form-input" style="width: auto">
-            <option>Public</option>
-            <option selected>Friends Only</option>
-            <option>Private</option>
+          <span class="setting-label">Profile Visibility</span>
+          <select class="form-input" style="width:auto;" id="privacySelect"
+                  onchange="saveSettingsDirect()">
+            <option value="public"  {% if profile.privacy == 'public'  %}selected{% endif %}>Public</option>
+            <option value="friends" {% if profile.privacy == 'friends' %}selected{% endif %}>Friends Only</option>
+            <option value="private" {% if profile.privacy == 'private' %}selected{% endif %}>Private</option>
           </select>
         </div>
         <div class="setting-item">
           <span class="setting-label">Show Activity Status</span>
-          <div class="toggle-switch active" onclick="toggleSetting(this)"></div>
+          <div class="toggle-switch {% if profile.show_activity %}active{% endif %}"
+               id="showActivityToggle" onclick="toggleSettingSwitch(this, 'show_activity')"></div>
         </div>
       </div>
 
+      <!-- Account Actions -->
       <div class="settings-group">
         <h3 class="settings-group-title">Account Actions</h3>
-        <div style="display: flex; flex-direction: column; gap: 12px">
-          <button class="action-btn btn-secondary" onclick="changePassword()">
-            <i class="fas fa-key"></i>
-            Change Password
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <button class="action-btn btn-secondary" onclick="openModal('changePasswordModal')">
+            <i class="fas fa-key"></i> Change Password
           </button>
-          <button class="action-btn btn-secondary" onclick="changePassword()">
-            <i class="fas fa-sign-out-alt"></i>
-            LogOut
-          </button>
-          <button
-            class="action-btn btn-secondary"
-            style="background: var(--accent-2); color: white"
-            onclick="
-              alert(
-                'Account deletion is permanent. Contact support to proceed.',
-              )
-            "
-          >
-            <i class="fas fa-trash"></i>
-            Delete Account
-          </button>
+          <a href="{{ url_for('auth.logout') }}" class="action-btn btn-secondary" style="text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </a>
+          <div class="danger-zone">
+            <h4><i class="fas fa-exclamation-triangle"></i> Danger Zone</h4>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">This action is permanent and cannot be undone.</p>
+            <button class="action-btn" style="background:var(--accent-2);color:white;width:100%;"
+                    onclick="openModal('deleteAccountModal')">
+              <i class="fas fa-trash"></i> Delete Account
+            </button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </main>
 
-<!-- Avatar Selection Modal -->
+<!-- ── Avatar Selection Modal ── -->
 <div class="modal-overlay" id="avatarModal">
   <div class="modal-content">
     <div class="modal-header">
-      <h3 class="modal-title">Change Avatar</h3>
-      <button class="modal-close" onclick="closeModal('avatarModal')">
-        <i class="fas fa-times"></i>
-      </button>
+      <h3 class="modal-title">Choose Your Avatar</h3>
+      <button class="modal-close" onclick="closeModal('avatarModal')"><i class="fas fa-times"></i></button>
     </div>
     <div class="modal-body">
-      <p style="margin-bottom: 20px; color: var(--text-secondary)">
-        Choose from pre-defined avatars or upload your own image:
-      </p>
-
-      <!-- Upload Option -->
-      <div style="margin-bottom: 24px">
-        <button
-          class="action-btn btn-primary"
-          style="width: 100%"
-          onclick="document.getElementById('avatarUpload').click()"
-        >
-          <i class="fas fa-upload"></i>
-          Upload Custom Avatar
-        </button>
-        <input
-          type="file"
-          id="avatarUpload"
-          accept="image/*"
-          style="display: none"
-        />
+      <p style="margin-bottom:16px;color:var(--text-secondary);">Select an illustrated avatar:</p>
+      <div class="avatar-grid-select" id="avatarSelectGrid">
+        <!-- Generated by JS -->
       </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:20px;gap:12px;">
+        <button class="action-btn btn-secondary" onclick="closeModal('avatarModal')">Cancel</button>
+        <button class="action-btn btn-primary" onclick="saveSelectedAvatar()">
+          <i class="fas fa-check"></i> Apply Avatar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
-      <!-- Pre-defined Avatars -->
-      <p
-        style="
-          margin-bottom: 12px;
-          font-weight: 500;
-          color: var(--text-primary);
-        "
-      >
-        Or choose a pre-defined avatar:
+<!-- ── Change Password Modal ── -->
+<div class="modal-overlay" id="changePasswordModal">
+  <div class="modal-content" style="max-width:420px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-key"></i> Change Password</h3>
+      <button class="modal-close" onclick="closeModal('changePasswordModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="pwd-group">
+        <label>Current Password</label>
+        <input type="password" id="currentPassword" placeholder="Enter current password">
+      </div>
+      <div class="pwd-group">
+        <label>New Password</label>
+        <input type="password" id="newPassword" placeholder="Enter new password (min 6 chars)">
+      </div>
+      <div class="pwd-group">
+        <label>Confirm New Password</label>
+        <input type="password" id="confirmPassword" placeholder="Repeat new password">
+      </div>
+      <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:20px;">
+        <button class="action-btn btn-secondary" onclick="closeModal('changePasswordModal')">Cancel</button>
+        <button class="action-btn btn-primary" onclick="submitChangePassword()">
+          <i class="fas fa-save"></i> Update Password
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Delete Account Modal ── -->
+<div class="modal-overlay" id="deleteAccountModal">
+  <div class="modal-content" style="max-width:420px;">
+    <div class="modal-header">
+      <h3 class="modal-title" style="color:var(--accent-2)"><i class="fas fa-trash"></i> Delete Account</h3>
+      <button class="modal-close" onclick="closeModal('deleteAccountModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-secondary);margin-bottom:12px;">
+        This will permanently delete your account, all tasks, notes, focus sessions, and data.
+        <strong>This cannot be undone.</strong>
       </p>
-      <div class="avatar-grid">
-        <div
-          class="avatar-option"
-          style="background: linear-gradient(135deg, #667eea, #764ba2)"
-          onclick="selectAvatar(this, 'gradient1')"
-        ></div>
-        <div
-          class="avatar-option"
-          style="background: linear-gradient(135deg, #f093fb, #f5576c)"
-          onclick="selectAvatar(this, 'gradient2')"
-        ></div>
-        <div
-          class="avatar-option"
-          style="background: linear-gradient(135deg, #4facfe, #00f2fe)"
-          onclick="selectAvatar(this, 'gradient3')"
-        ></div>
-        <div
-          class="avatar-option"
-          style="background: linear-gradient(135deg, #43e97b, #38f9d7)"
-          onclick="selectAvatar(this, 'gradient4')"
-        ></div>
-        <div
-          class="avatar-option"
-          style="background: linear-gradient(135deg, #fa709a, #fee140)"
-          onclick="selectAvatar(this, 'gradient5')"
-        ></div>
-        <div
-          class="avatar-option"
-          style="background: linear-gradient(135deg, #30cfd0, #330867)"
-          onclick="selectAvatar(this, 'gradient6')"
-        ></div>
-        <div
-          class="avatar-option"
-          style="background: linear-gradient(135deg, #a8edea, #fed6e3)"
-          onclick="selectAvatar(this, 'gradient7')"
-        ></div>
-        <div
-          class="avatar-option"
-          style="background: linear-gradient(135deg, #ff9a9e, #fecfef)"
-          onclick="selectAvatar(this, 'gradient8')"
-        ></div>
+      <p style="font-size:13px;color:var(--text-muted);">Type <strong>DELETE</strong> to confirm:</p>
+      <input type="text" class="delete-confirm-input" id="deleteConfirmInput" placeholder="DELETE">
+      <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:20px;">
+        <button class="action-btn btn-secondary" onclick="closeModal('deleteAccountModal')">Cancel</button>
+        <button class="action-btn" style="background:var(--accent-2);color:white;" onclick="submitDeleteAccount()">
+          <i class="fas fa-trash"></i> Delete Forever
+        </button>
       </div>
     </div>
   </div>
@@ -432,57 +394,233 @@ block extra_css %}
   <div class="modal-content">
     <div class="modal-header">
       <h3 class="modal-title">Export Profile Data</h3>
-      <button class="modal-close" onclick="closeModal('exportModal')">
-        <i class="fas fa-times"></i>
-      </button>
+      <button class="modal-close" onclick="closeModal('exportModal')"><i class="fas fa-times"></i></button>
     </div>
     <div class="modal-body">
-      <div style="display: flex; flex-direction: column; gap: 12px">
-        <button class="action-btn btn-primary" onclick="exportAsImage()">
-          <i class="fas fa-image"></i>
-          Export as Image (PNG)
-        </button>
-        <button class="action-btn btn-secondary" onclick="exportAsPDF()">
-          <i class="fas fa-file-pdf"></i>
-          Export as PDF
-        </button>
-        <button class="action-btn btn-secondary" onclick="exportAsJSON()">
-          <i class="fas fa-file-code"></i>
-          Export Data (JSON)
-        </button>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <button class="action-btn btn-primary" onclick="exportAsImage()"><i class="fas fa-image"></i> Export as Image (PNG)</button>
+        <button class="action-btn btn-secondary" onclick="exportAsPDF()"><i class="fas fa-file-pdf"></i> Export as PDF</button>
+        <button class="action-btn btn-secondary" onclick="exportAsJSON()"><i class="fas fa-file-code"></i> Export Data (JSON)</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Hidden File Inputs -->
-<input
-  type="file"
-  id="backgroundUpload"
-  accept="image/*"
-  style="display: none"
-/>
+<input type="file" id="backgroundUpload" accept="image/*" style="display:none">
+{% endblock %}
 
-{% endblock %} {% block extra_js %}
+{% block extra_js %}
 <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
 <script>
-  function toggleEditForm() {
-    const form = document.getElementById("editProfileForm");
-    form.style.display = form.style.display === "none" ? "block" : "none";
-  }
+/* ── Profile Page Logic ── */
 
-  function saveProfile() {
-    const form = document.getElementById("personalInfoForm");
-    const fd = new FormData(form);
+const AVATAR_EMOJIS_P = ['','📚','🦊','🌊','🔥','⭐','🌙','🎯','🚀','💎','🎨','🌿','⚡'];
+const AVATAR_GRADIENTS = [
+  '',
+  'linear-gradient(135deg,#667eea,#764ba2)',
+  'linear-gradient(135deg,#f093fb,#f5576c)',
+  'linear-gradient(135deg,#4facfe,#00f2fe)',
+  'linear-gradient(135deg,#43e97b,#38f9d7)',
+  'linear-gradient(135deg,#fa709a,#fee140)',
+  'linear-gradient(135deg,#30cfd0,#330867)',
+  'linear-gradient(135deg,#a18cd1,#fbc2eb)',
+  'linear-gradient(135deg,#ffecd2,#fcb69f)',
+  'linear-gradient(135deg,#a1c4fd,#c2e9fb)',
+  'linear-gradient(135deg,#fd7043,#ff8a65)',
+  'linear-gradient(135deg,#26c6da,#00acc1)',
+  'linear-gradient(135deg,#ab47bc,#8e24aa)'
+];
 
-    fetch("/api/update-profile", { method: "POST", body: fd })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) {
-          alert("Profile updated!");
-          location.reload();
-        }
-      });
+let selectedAvatarId = {{ profile.avatar_id }};
+
+// Apply avatar to main display
+(function applyMainAvatar() {
+  const el = document.getElementById('mainAvatar');
+  if (!el) return;
+  const id     = {{ profile.avatar_id }};
+  const initials = '{{ profile.profilename[0]|upper }}';
+  const emoji  = AVATAR_EMOJIS_P[id] || initials;
+  el.innerHTML = `<div class="svg-avatar avatar-${id}">${emoji}</div>`;
+})();
+
+// Build avatar selection grid
+(function buildAvatarGrid() {
+  const grid = document.getElementById('avatarSelectGrid');
+  if (!grid) return;
+  for (let i = 1; i <= 12; i++) {
+    const card = document.createElement('div');
+    card.className = `avatar-option-card avatar-${i}${i === {{ profile.avatar_id }} ? ' selected' : ''}`;
+    card.textContent = AVATAR_EMOJIS_P[i];
+    card.dataset.id = i;
+    card.onclick = function() {
+      document.querySelectorAll('.avatar-option-card').forEach(c => c.classList.remove('selected'));
+      this.classList.add('selected');
+      selectedAvatarId = i;
+    };
+    grid.appendChild(card);
   }
+})();
+
+function saveSelectedAvatar() {
+  const fd = new FormData();
+  fd.append('avatar_id', selectedAvatarId);
+
+  fetch('/api/set-avatar', { method:'POST', body:fd })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        // Update displayed avatar
+        const el    = document.getElementById('mainAvatar');
+        const emoji = AVATAR_EMOJIS_P[selectedAvatarId] || 'U';
+        el.innerHTML = `<div class="svg-avatar avatar-${selectedAvatarId}">${emoji}</div>`;
+        closeModal('avatarModal');
+        showToast('Avatar updated!', 'success');
+      }
+    });
+}
+
+function scrollToEdit() {
+  document.getElementById('editSection')?.scrollIntoView({ behavior:'smooth' });
+}
+
+function cancelEdit() {
+  document.getElementById('personalInfoForm')?.reset();
+}
+
+function saveProfile() {
+  const fd = new FormData(document.getElementById('personalInfoForm'));
+  fetch('/api/update-profile', { method:'POST', body:fd })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        showToast('Profile updated successfully!', 'success');
+        // Update displayed name/username
+        const pn = fd.get('profilename');
+        const un = fd.get('username');
+        const pr = fd.get('profession');
+        if (pn) document.getElementById('displayName').textContent = pn;
+        if (un) document.getElementById('displayUsername').textContent = '@' + un;
+        if (pr) updateProfessionBadge(pr);
+      } else {
+        showToast(d.error || 'Failed to update profile', 'error');
+      }
+    });
+}
+
+function selectEditProfession(val) {
+  document.querySelectorAll('.edit-profession-btn').forEach(el => {
+    el.style.opacity = (el.dataset.value === val) ? '1' : '0.4';
+  });
+  document.getElementById('editProfessionInput').value = val;
+}
+
+function updateProfessionBadge(profession) {
+  const icons = {Student:'📚',Teacher:'🎓',Individual:'👤',Professional:'💼',Other:'⭐'};
+  const classes = {Student:'badge-student',Teacher:'badge-teacher',Individual:'badge-individual',Professional:'badge-professional',Other:'badge-other'};
+  const el = document.getElementById('professionBadge');
+  if (el) {
+    el.textContent = (icons[profession]||'⭐') + ' ' + profession;
+    el.className = 'profession-badge ' + (classes[profession]||'badge-other');
+  }
+}
+
+// Settings toggles
+const _settingState = {
+  email_notif:    {{ 'true' if profile.email_notif else 'false' }},
+  whatsapp_notif: {{ 'true' if profile.whatsapp_notif else 'false' }},
+  show_activity:  {{ 'true' if profile.show_activity else 'false' }}
+};
+
+function toggleSettingSwitch(el, key) {
+  el.classList.toggle('active');
+  _settingState[key] = el.classList.contains('active');
+  saveSettingsDirect();
+}
+
+function saveSettingsDirect() {
+  const fd = new FormData();
+  fd.append('email_notif',    _settingState.email_notif    ? 'true' : 'false');
+  fd.append('whatsapp_notif', _settingState.whatsapp_notif ? 'true' : 'false');
+  fd.append('show_activity',  _settingState.show_activity  ? 'true' : 'false');
+  fd.append('notif_channel',  document.getElementById('notifChannelSelect')?.value || 'email');
+  fd.append('privacy',        document.getElementById('privacySelect')?.value || 'public');
+
+  fetch('/api/save-settings', { method:'POST', body:fd })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) showToast('Settings saved', 'success', 2000);
+    });
+}
+
+// Change password
+function submitChangePassword() {
+  const fd = new FormData();
+  fd.append('current_password', document.getElementById('currentPassword').value);
+  fd.append('new_password',     document.getElementById('newPassword').value);
+  fd.append('confirm_password', document.getElementById('confirmPassword').value);
+
+  fetch('/api/change-password', { method:'POST', body:fd })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        showToast(d.message, 'success');
+        closeModal('changePasswordModal');
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+      } else {
+        showToast(d.error, 'error');
+      }
+    });
+}
+
+// Delete account
+function submitDeleteAccount() {
+  const text = document.getElementById('deleteConfirmInput').value;
+  const fd   = new FormData();
+  fd.append('confirm_text', text);
+
+  fetch('/api/delete-account', { method:'POST', body:fd })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        window.location.href = '/login';
+      } else {
+        showToast(d.error, 'error');
+      }
+    });
+}
+
+// Real-time follower count (SocketIO)
+if (typeof io !== 'undefined') {
+  const socket = io();
+  socket.on('follower_count_updated', function(data) {
+    if (data.user_id == {{ profile.user_id }}) {
+      const el = document.getElementById('followersCount');
+      if (el) {
+        el.textContent = data.followers;
+        el.style.animation = 'none';
+        el.offsetHeight; // reflow
+        el.style.animation = 'countPop 0.4s ease';
+      }
+    }
+  });
+}
+
+// Bio char counter
+const bioEl = document.getElementById('bio');
+const bioCount = document.getElementById('bioCharCount');
+if (bioEl && bioCount) {
+  bioEl.addEventListener('input', () => { bioCount.textContent = bioEl.value.length; });
+}
 </script>
+
+<style>
+@keyframes countPop {
+  0%  { transform:scale(1); }
+  50% { transform:scale(1.3); color:var(--primary); }
+  100%{ transform:scale(1); }
+}
+</style>
 {% endblock %}
