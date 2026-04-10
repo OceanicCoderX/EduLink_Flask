@@ -1,0 +1,640 @@
+{% extends "base.html" %}
+{% block title %}{{ group.group_name }} - EduLink Group{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Modern Group Chat Layout ── */
+.group-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 0;
+    height: calc(100vh - 100px);
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+@media (max-width: 900px) {
+    .group-layout { grid-template-columns: 1fr; }
+    .group-sidebar { display: none; }
+}
+
+/* ── Left Sidebar (Group Switcher) ── */
+.group-sidebar {
+    background: var(--bg-primary);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+.gs-header {
+    padding: 20px;
+    font-size: 18px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.gs-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+.gs-item {
+    padding: 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s;
+    text-decoration: none;
+    color: var(--text-primary);
+}
+.gs-item:hover { background: var(--bg-secondary); }
+.gs-item.active { background: var(--primary); color: white; }
+.gs-avatar {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: var(--accent-1); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; font-size: 16px;
+}
+.gs-item.active .gs-avatar { background: rgba(255,255,255,0.2); }
+
+/* ── Main Chat Area ── */
+.chat-area {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-secondary);
+}
+.chat-header {
+    padding: 16px 20px;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.ch-info { display: flex; align-items: center; gap: 12px; }
+.ch-title { font-size: 18px; font-weight: 700; }
+.ch-subtitle { font-size: 12px; color: var(--text-muted); margin-top:2px; }
+
+/* ── Chat Messages Stream ── */
+.chat-stream {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.msg-wrapper {
+    display: flex;
+    max-width: 70%;
+    align-items: flex-end;
+    gap: 8px;
+    animation: fadeIn 0.2s ease-out;
+}
+.msg-wrapper.mine {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.msg-av {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent-2); color:white;
+    display: flex; align-items:center; justify-content:center; font-size: 10px; flex-shrink: 0;
+}
+.msg-content-box {
+    display: flex; flex-direction: column; gap: 4px;
+}
+.msg-author { font-size: 11px; color: var(--text-muted); margin-left:2px; }
+.msg-wrapper.mine .msg-author { text-align: right; margin-right:2px; margin-left:0; }
+
+.msg-bubble {
+    background: var(--bg-primary);
+    padding: 12px 16px;
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+    font-size: 14px;
+    line-height: 1.5;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+.msg-wrapper.mine .msg-bubble {
+    background: var(--primary);
+    color: white;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 4px;
+}
+
+.msg-meta { font-size: 10px; color: var(--text-muted); margin-top: 4px; text-align: right; }
+.msg-wrapper.mine .msg-meta { color: rgba(255,255,255,0.7); }
+
+/* Attachment Styling */
+.msg-attachment {
+    margin-top: 8px;
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 100%;
+}
+.msg-attachment img { max-width: 100%; max-height: 250px; border-radius: 8px; display: block; }
+.msg-file {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px; background: rgba(0,0,0,0.05);
+    border-radius: 8px; text-decoration: none; color: inherit;
+    font-weight: 500; font-size: 13px;
+}
+.msg-wrapper.mine .msg-file { background: rgba(255,255,255,0.2); color: white; }
+
+/* ── Input Area ── */
+.chat-input-container {
+    padding: 16px 20px;
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.attach-btn {
+    background: transparent; border: none; font-size: 20px;
+    color: var(--text-muted); cursor: pointer; transition: 0.2s;
+    display: flex; align-items:center; justify-content:center;
+}
+.attach-btn:hover { color: var(--primary); }
+
+.chat-input {
+    flex: 1;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 12px 20px;
+    font-size: 14px;
+    color: var(--text-primary);
+    outline: none;
+    transition: 0.2s;
+}
+.chat-input:focus { border-color: var(--primary); }
+
+.send-btn {
+    width: 45px; height: 45px;
+    border-radius: 50%; border: none;
+    background: var(--primary); color: white;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px; transition: 0.2s;
+}
+.send-btn:hover { transform: scale(1.05); }
+
+/* File Preview Strip */
+.file-preview-strip {
+    display: none;
+    padding: 10px 20px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--primary);
+    font-weight: 600;
+}
+.fp-close { cursor: pointer; color: var(--text-muted); }
+
+/* ── Settings Modal ── */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(5px);
+    display: none; justify-content: center; align-items: center;
+    z-index: 1000;
+}
+.settings-modal {
+    background: var(--bg-primary); width: 90%; max-width: 500px;
+    border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    display: flex; flex-direction: column; max-height: 80vh;
+}
+.sm-header { padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 18px; }
+.sm-close { cursor: pointer; color: var(--text-muted); font-size: 20px; transition: 0.2s; }
+.sm-close:hover { color: var(--text-primary); }
+.sm-tabs { display: flex; border-bottom: 1px solid var(--border-color); }
+.sm-tab { flex: 1; text-align: center; padding: 12px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); transition: 0.2s; border-bottom: 2px solid transparent; }
+.sm-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.sm-body { padding: 20px; overflow-y: auto; flex: 1; }
+.sm-section { display: none; }
+.sm-section.active { display: block; }
+.sm-btn { padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; width: 100%; transition: 0.2s; }
+.sm-btn-primary { background: var(--primary); color: white; }
+.sm-btn-danger { background: #dc3545; color: white; margin-top: 10px; }
+.sm-input { width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="main-content" style="padding-top: 80px;">
+    <div class="group-layout">
+        <!-- Left Sidebar: Groups List -->
+        <div class="group-sidebar">
+            <div class="gs-header">
+                Chats
+                <a href="{{ url_for('community.community') }}" style="font-size:14px; color:var(--primary); text-decoration:none;"><i class="fas fa-compass"></i> Discover</a>
+            </div>
+            <div class="gs-list">
+                {% for g in my_groups %}
+                <a href="{{ url_for('community.group_page', group_id=g.group_id) }}" class="gs-item {% if g.group_id == group.group_id %}active{% endif %}">
+                    <div class="gs-avatar">{{ g.group_name[0]|upper }}</div>
+                    <div style="font-weight: 600;">{{ g.group_name }}</div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Right Main: Chat Area -->
+        <div class="chat-area">
+            <!-- Header -->
+            <div class="chat-header">
+                <div class="ch-info">
+                    <div class="gs-avatar" style="border-radius: 50%;">{{ group.group_name[0]|upper }}</div>
+                    <div>
+                        <div class="ch-title">{{ group.group_name }} {% if group.type == 'private' %}<i class="fas fa-lock" style="font-size:12px;color:var(--text-muted);"></i>{% endif %}</div>
+                        <div class="ch-subtitle">{{ group.description }}</div>
+                    </div>
+                </div>
+                <div>
+                    <button id="GroupSettingsBtn" onclick="openSettings()" style="padding: 8px 16px; border-radius: 8px; border:1px solid var(--primary); background:transparent; color:var(--primary); cursor:pointer; font-weight:600;">
+                        <i class="fas {% if group.is_admin %}fa-cog{% else %}fa-info-circle{% endif %}"></i> 
+                        {% if group.is_admin %}Settings{% else %}Group Info{% endif %}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            <div class="chat-stream" id="chatStream">
+                <!-- Injected via JS -->
+                <div style="text-align:center; color:var(--text-muted); font-size:13px; margin-top:20px;">Loading messages...</div>
+            </div>
+
+            <!-- File Preview -->
+            <div class="file-preview-strip" id="filePreviewStrip">
+                <i class="fas fa-file-alt" style="font-size:18px;"></i>
+                <span id="fpName" style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Filename.png</span>
+                <i class="fas fa-times fp-close" onclick="clearFile()"></i>
+            </div>
+
+            <!-- Input Box -->
+            <div class="chat-input-container">
+                <button class="attach-btn" title="Attach file" onclick="document.getElementById('fileInput').click()">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+                <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(event)">
+                
+                <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." autocomplete="off">
+                
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="settings-modal">
+            <div class="sm-header">
+                <div>{% if group.is_admin %}Group Settings{% else %}Group Info{% endif %}</div>
+                <div class="sm-close" onclick="closeSettings()">&times;</div>
+            </div>
+            <div class="sm-tabs">
+                <div class="sm-tab active" onclick="switchTab('info')">Info</div>
+                <div class="sm-tab" onclick="switchTab('members')">Members</div>
+                {% if group.is_admin %}
+                <div class="sm-tab" onclick="switchTab('requests')">Requests</div>
+                {% endif %}
+            </div>
+            <div class="sm-body">
+                <!-- Info Tab -->
+                <div class="sm-section active" id="tab-info">
+                    <label style="font-size:12px;color:var(--text-muted);">Group Name</label>
+                    <input type="text" class="sm-input" id="editGroupName" value="{{ group.group_name }}" {% if not group.is_admin %}disabled{% endif %}>
+                    
+                    <label style="font-size:12px;color:var(--text-muted);">Description</label>
+                    <textarea class="sm-input" id="editGroupDesc" rows="3" {% if not group.is_admin %}disabled{% endif %}>{{ group.description }}</textarea>
+                    
+                    {% if group.is_admin %}
+                    <button class="sm-btn sm-btn-primary" onclick="saveGroupInfo()">Save Changes</button>
+                    <!-- Admin can't leave their own group natively unless they transfer, so we just hide the button -->
+                    {% else %}
+                    <button class="sm-btn sm-btn-danger" onclick="leaveGroup()">Leave Group</button>
+                    {% endif %}
+                </div>
+                
+                <!-- Members Tab -->
+                <div class="sm-section" id="tab-members">
+                    <div id="membersListContainer" style="display:flex; flex-direction:column; gap:10px;">Loading members...</div>
+                </div>
+                
+                <!-- Requests Tab -->
+                {% if group.is_admin %}
+                <div class="sm-section" id="tab-requests">
+                    <div id="requestsListContainer" style="display:flex; flex-direction:column; gap:10px;">Loading requests...</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const MY_USER_ID = {{ user.user_id }};
+const MY_NAME = "{{ user.profilename }}";
+const GROUP_ID = {{ group.group_id }};
+
+let selectedFile = null;
+const socket = io();
+
+window.addEventListener('load', () => {
+    // Join room setup
+    socket.emit('join_community_room', { subject: 'general', group_id: GROUP_ID });
+    loadHistory();
+    
+    // Enter key support
+    document.getElementById('chatInput').addEventListener('keypress', (e) => {
+        if(e.key === 'Enter') sendMessage();
+    });
+});
+
+// Real-time receiver
+socket.on('community_new_message', (data) => {
+    appendMessage(data);
+});
+socket.on('community_user_joined', (data) => appendSystemMsg(data.message));
+socket.on('community_user_left', (data) => appendSystemMsg(data.message));
+
+// Fetch previous messages
+function loadHistory() {
+    fetch(`/api/get-chat-history?group_id=${GROUP_ID}&subject=general`)
+        .then(r => r.json())
+        .then(msgs => {
+            const stream = document.getElementById('chatStream');
+            stream.innerHTML = '';
+            if(msgs.length === 0) {
+                stream.innerHTML = '<div style="text-align:center; color:var(--text-muted); font-size:13px; margin-top:20px;">Say hello! 👋</div>';
+                return;
+            }
+            msgs.forEach(m => appendMessage(m, false));
+            scrollToBottom();
+        });
+}
+
+function appendSystemMsg(text) {
+    const stream = document.getElementById('chatStream');
+    const div = document.createElement('div');
+    div.style.cssText = 'text-align:center; font-size:11px; color:var(--text-muted); padding:4px;';
+    div.textContent = text;
+    stream.appendChild(div);
+    scrollToBottom();
+}
+
+function appendMessage(data, scroll=true) {
+    const stream = document.getElementById('chatStream');
+    if (stream.innerHTML.includes('Say hello!')) stream.innerHTML = '';
+    
+    const isMe = data.user_id === MY_USER_ID;
+    const div = document.createElement('div');
+    div.className = `msg-wrapper ${isMe ? 'mine' : ''}`;
+    
+    let attachmentHtml = '';
+    if (data.file_url) {
+        if (data.file_type && data.file_type.startsWith('image/')) {
+            attachmentHtml = `<div class="msg-attachment"><img src="${data.file_url}" alt="${data.file_name}"></div>`;
+        } else {
+            attachmentHtml = `
+                <div class="msg-attachment">
+                    <a href="${data.file_url}" target="_blank" class="msg-file">
+                        <i class="fas fa-file-download"></i> ${data.file_name || 'Download File'}
+                    </a>
+                </div>`;
+        }
+    }
+
+    div.innerHTML = `
+        ${!isMe ? `<div class="msg-av">${data.username[0].toUpperCase()}</div>` : ''}
+        <div class="msg-content-box">
+            ${!isMe ? `<div class="msg-author">${data.username} • ${data.profession}</div>` : ''}
+            <div class="msg-bubble">
+                ${escHtml(data.message)}
+                ${attachmentHtml}
+                <div class="msg-meta">${data.time}</div>
+            </div>
+        </div>
+    `;
+    stream.appendChild(div);
+    if(scroll) scrollToBottom();
+}
+
+async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    
+    if(!msg && !selectedFile) return;
+    
+    input.value = ''; // clear immediately for UX
+    
+    let fileUrl = null, fileName = null, fileType = null;
+    
+    // Handle File Upload first if selected
+    if (selectedFile) {
+        const fd = new FormData();
+        fd.append('file', selectedFile);
+        
+        try {
+            const res = await fetch('/api/upload-group-file', { method: 'POST', body: fd });
+            const data = await res.json();
+            if (data.success) {
+                fileUrl = data.file_url;
+                fileName = data.file_name;
+                fileType = data.file_type;
+            } else {
+                alert('File upload failed: ' + data.error);
+                return; // Stop if upload failed
+            }
+        } catch(e) {
+            alert('Error uploading file');
+            return;
+        }
+        clearFile(); // clear the UI selection
+    }
+    
+    // Emit via socket
+    socket.emit('community_send_message', {
+        group_id: GROUP_ID,
+        subject: 'general',
+        message: msg,
+        file_url: fileUrl,
+        file_name: fileName,
+        file_type: fileType
+    });
+}
+
+function handleFileSelect(e) {
+    if(e.target.files.length > 0) {
+        selectedFile = e.target.files[0];
+        document.getElementById('fpName').textContent = selectedFile.name;
+        document.getElementById('filePreviewStrip').style.display = 'flex';
+        document.getElementById('chatInput').focus();
+    }
+}
+function clearFile() {
+    selectedFile = null;
+    document.getElementById('fileInput').value = '';
+    document.getElementById('filePreviewStrip').style.display = 'none';
+}
+
+function scrollToBottom() {
+    const stream = document.getElementById('chatStream');
+    stream.scrollTop = stream.scrollHeight;
+}
+function escHtml(str) {
+    if (!str) return '';
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(str));
+    return d.innerHTML.replace(/\n/g, '<br>');
+}
+
+// --- Settings Modal Logic ---
+function openSettings() {
+    document.getElementById('settingsModal').style.display = 'flex';
+    loadGroupMembers();
+    {% if group.is_admin %}
+    loadGroupRequests();
+    {% endif %}
+}
+
+function closeSettings() {
+    document.getElementById('settingsModal').style.display = 'none';
+}
+
+function switchTab(tabId) {
+    document.querySelectorAll('.sm-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.sm-section').forEach(s => s.classList.remove('active'));
+    document.querySelector(`.sm-tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
+    document.getElementById(`tab-${tabId}`).classList.add('active');
+}
+
+function saveGroupInfo() {
+    const fd = new FormData();
+    fd.append('group_id', GROUP_ID);
+    fd.append('group_name', document.getElementById('editGroupName').value.trim());
+    fd.append('group_description', document.getElementById('editGroupDesc').value.trim());
+    
+    fetch('/api/edit-group', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(d => {
+            if(d.success) {
+                alert('Group info updated!');
+                window.location.reload();
+            } else alert(d.error);
+        });
+}
+
+function leaveGroup() {
+    if(confirm('Are you sure you want to leave this group?')) {
+        const fd = new FormData();
+        fd.append('group_id', GROUP_ID);
+        fetch('/api/leave-group', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(d => {
+                if(d.success) {
+                    window.location.href = '/community';
+                } else alert(d.error);
+            });
+    }
+}
+
+function loadGroupMembers() {
+    fetch(`/api/get-group-members?group_id=${GROUP_ID}`)
+        .then(r => r.json())
+        .then(members => {
+            const container = document.getElementById('membersListContainer');
+            if (members.length === 0) { container.innerHTML = 'No members found.'; return; }
+            
+            container.innerHTML = members.map(m => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-primary);">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div class="msg-av" style="background:var(--accent-1);">${m.name[0].toUpperCase()}</div>
+                        <div>
+                            <div style="font-weight:600; font-size:14px;">${m.name}</div>
+                            <div style="font-size:11px; color:var(--text-muted);">${m.profession} • ${m.stacks} Stacks</div>
+                        </div>
+                    </div>
+                    {% if group.is_admin %}
+                    ${m.user_id === MY_USER_ID ? '<span style="font-size:12px; color:var(--text-muted);">Admin</span>' : `<button onclick="removeMember(${m.user_id})" style="padding:4px 8px; border:1px solid #dc3545; background:transparent; color:#dc3545; border-radius:4px; font-size:12px; cursor:pointer;">Remove</button>`}
+                    {% endif %}
+                </div>
+            `).join('');
+        });
+}
+
+function removeMember(memberId) {
+    if(!confirm('Remove this user from the group?')) return;
+    const fd = new FormData();
+    fd.append('group_id', GROUP_ID);
+    fd.append('member_id', memberId);
+    fetch('/api/remove-group-member', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) loadGroupMembers();
+            else alert(d.error || 'Failed to remove member');
+        });
+}
+
+{% if group.is_admin %}
+function loadGroupRequests() {
+    fetch('/api/get-group-requests')
+        .then(r => r.json())
+        .then(reqs => {
+            const container = document.getElementById('requestsListContainer');
+            if (!container) return; // For safety
+            
+            // reqs endpoint returns all group requests for the admin. Filter for this active group only
+            const groupReqs = reqs.filter(r => String(r.group_id) === String(GROUP_ID));
+            
+            if (groupReqs.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-muted); font-size:13px; text-align:center;">No pending requests for this group.</div>';
+                return;
+            }
+            container.innerHTML = groupReqs.map(r => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-primary);">
+                    <div>
+                        <div style="font-weight:600; font-size:14px;">${r.user_name}</div>
+                        <div style="font-size:11px; color:var(--text-muted);">Requested to join</div>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <button onclick="handleRequest(${r.request_id}, 'approve')" style="padding:4px 8px; background:var(--success, #28a745); color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-check"></i></button>
+                        <button onclick="handleRequest(${r.request_id}, 'reject')" style="padding:4px 8px; background:var(--accent-2); color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        });
+}
+
+function handleRequest(reqId, action) {
+    const fd = new FormData();
+    fd.append('request_id', reqId);
+    fd.append('action', action);
+    fetch('/api/handle-group-request', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(d => {
+            if(d.success) {
+                loadGroupRequests();
+                loadGroupMembers();
+            } else alert(d.error || 'Failed to process request');
+        });
+}
+{% endif %}
+
+</script>
+{% endblock %}
