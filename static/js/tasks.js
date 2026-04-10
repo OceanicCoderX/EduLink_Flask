@@ -246,13 +246,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
         filtered.sort((a, b) => new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time));
 
-        tasksList.innerHTML = '';
+        if (tasksList) tasksList.innerHTML = '';
+        else return;
 
         if (filtered.length === 0) {
-            emptyState.style.display = 'block';
-            tasksList.appendChild(emptyState);
+            if (emptyState) {
+                emptyState.style.display = 'block';
+                tasksList.appendChild(emptyState);
+            }
         } else {
-            emptyState.style.display = 'none';
+            if (emptyState) emptyState.style.display = 'none';
             filtered.forEach(task => {
                 tasksList.innerHTML += createTaskHTML(task);
             });
@@ -346,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
             .then(r => r.json())
             .then(result => {
-                if (result.status === 'deleted') {
+                if (result.success || result.status === 'deleted') {
                     loadTasks();
                     showNotification('🗑️ Task deleted!');
                 }
@@ -367,25 +370,19 @@ document.addEventListener('DOMContentLoaded', function () {
         set('totalTasksCount', total);
         set('completedTasksCount', completed);
         set('pendingTasksCount', pending);
-        set('todayTasksCount', todayCount);
+        set('todayTasksCount', getTasksForDate(today).length);
         set('streakCount', streak)
 
         // Donut
-        const pct = d.percentage;
+        const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
         const circle = document.getElementById('progressCircle');
-        const circ = 2 * Math.PI * 35;
-        circle.style.strokeDasharray = circ;
-        circle.style.strokeDashoffset = circ - (circ * pct / 100);
-        document.getElementById('progressPercentage').textContent = pct + '%';
-
-        // const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-        // set('progressPercentage', pct + '%');
-
-        // const circle = document.getElementById('progressCircle');
-        // if (circle) {
-        //     const circumference = 439.82;
-        //     circle.style.strokeDashoffset = circumference - (pct / 100) * circumference;
-        // }
+        if (circle) {
+            const circ = 2 * Math.PI * 70; // r=70 in SVG
+            circle.style.strokeDasharray = circ;
+            circle.style.strokeDashoffset = circ - (circ * pct / 100);
+        }
+        const pctEl = document.getElementById('progressPercentage');
+        if (pctEl) pctEl.textContent = pct + '%';
     }
 
     // ── Search ────────────────────────────────────────────────
@@ -600,30 +597,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ✅ NEW: Recurring tasks ke liye date check — ek task ke multiple dates calculate karo
     function getTasksForDate(dateStr) {
+        if (!dateStr) return [];
+        const checkDate = new Date(dateStr + 'T12:00:00');
+
         return tasks.filter(task => {
-            if (task.date === dateStr) return true;  // Direct match
+            if (task.date === dateStr) return true;
+
+            const taskDate = new Date(task.date + 'T12:00:00');
+            // ❌ Task should NOT appear on dates before its initial Due Date
+            if (checkDate < taskDate) return false;
 
             if (!task.recurring || task.recurring === 'once') return false;
 
-            const taskDate = new Date(task.date);
-            const checkDate = new Date(dateStr);
-            if (checkDate < taskDate) return false;  // Future date, skip
-
-            if (task.recurring === 'daily') return true;  // Har din
-
-            if (task.recurring === 'weekly') {
-                return taskDate.getDay() === checkDate.getDay();  // Same day of week
-            }
-
-            if (task.recurring === 'monthly') {
-                return taskDate.getDate() === checkDate.getDate();  // Same date every month
-            }
-
+            if (task.recurring === 'daily') return true;
+            if (task.recurring === 'weekly') return taskDate.getDay() === checkDate.getDay();
+            if (task.recurring === 'monthly') return taskDate.getDate() === checkDate.getDate();
             if (task.recurring === 'yearly') {
                 return taskDate.getDate() === checkDate.getDate() &&
                     taskDate.getMonth() === checkDate.getMonth();
             }
-
             return false;
         });
     }
