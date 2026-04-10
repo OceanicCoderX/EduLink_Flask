@@ -3,9 +3,42 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/community.css') }}">
 <style>
-/* ── Chat Sidebar ── */
-.community-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
-.chat-sidebar { background: var(--bg-secondary); border-radius: 16px; display: flex; flex-direction: column; height: 70vh; position: sticky; top: 20px; }
+/* ── Layout ── */
+.community-layout { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
+/* ── Discovery Grid ── */
+.discovery-section { padding: 20px; }
+.discovery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-top: 20px; }
+.community-card { 
+    background: var(--bg-primary); 
+    border-radius: 16px; 
+    padding: 20px; 
+    border: 1px solid var(--border-color); 
+    transition: all 0.3s; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 12px;
+}
+.community-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); border-color: var(--primary); }
+.cc-header { display: flex; justify-content: space-between; align-items: start; }
+.cc-badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.cc-badge.public { background: rgba(45, 206, 137, 0.1); color: #2dce89; }
+.cc-badge.private { background: rgba(245, 54, 92, 0.1); color: #f5365c; }
+.cc-title { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.cc-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; min-height: 40px; }
+.cc-meta { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--text-muted); }
+.cc-footer { margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+.join-btn { padding: 8px 16px; border-radius: 8px; background: var(--primary); color: white; border: none; cursor: pointer; font-weight: 600; transition: 0.2s; }
+.join-btn:hover { opacity: 0.9; transform: scale(1.02); }
+.join-btn.pending { background: var(--bg-secondary); color: var(--text-muted); cursor: default; }
+
+/* ── Friends Strip ── */
+.friends-list { display: flex; gap: 15px; overflow-x: auto; padding: 10px 0; scrollbar-width: none; }
+.friends-list::-webkit-scrollbar { display: none; }
+.friend-item { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; width: 70px; }
+.friend-av { width: 50px; height: 50px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; border: 2px solid var(--bg-primary); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.friend-name { font-size: 11px; text-align: center; color: var(--text-primary); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; }
+
+.chat-sidebar { background: var(--bg-secondary); border-radius: 16px; display: flex; flex-direction: column; height: 75vh; position: sticky; top: 20px; }
 .chat-sidebar-header { padding: 16px; border-bottom: 1px solid var(--border-color); }
 .subject-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .subj-tab { padding: 4px 10px; border-radius: 50px; border: 1px solid var(--border-color); cursor: pointer; font-size: 12px; background: var(--bg-primary); color: var(--text-primary); }
@@ -47,26 +80,28 @@
     </div>
 
     <div class="community-layout">
-        <!-- Feed Section -->
-        <div class="feed-section">
-            <!-- Create Post -->
-            <div class="create-post-card">
-                <textarea class="create-post-input" id="createPostInput" placeholder="Share your thoughts, ask questions..."></textarea>
-                <div class="create-post-actions">
-                    <button class="post-btn" id="createPostBtn"><i class="fas fa-paper-plane"></i> Post</button>
-                </div>
+        <!-- Discovery Section -->
+        <div class="discovery-section">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2 style="font-size:22px; font-weight:800;">🌍 Discover Communities</h2>
+                <button onclick="openCreateModal()" class="add-friend-btn">
+                    <i class="fas fa-plus"></i> Create Community
+                </button>
             </div>
 
-
-            <!-- Feed Posts -->
-            <div id="feedPosts"><div style="color:var(--text-muted);padding:20px;text-align:center;">Loading posts...</div></div>
+            <div class="discovery-grid" id="discoveryGrid">
+                <div style="color:var(--text-muted); padding:40px; text-align:center; grid-column:1/-1;">
+                    <i class="fas fa-circle-notch fa-spin" style="font-size:24px; margin-bottom:10px;"></i>
+                    <p>Finding groups for you...</p>
+                </div>
+            </div>
         </div>
 
-        <!-- Right Sidebar: Leaderboard + Community Chat -->
-        <div>
+        <!-- Right Sidebar: Leaderboard -->
+        <div class="right-sidebar">
             <!-- Leaderboard -->
-            <div class="leaderboard-section" style="margin-bottom:16px;">
-                <h3 class="section-title">🏅 Top Contributors</h3>
+            <div class="leaderboard-section">
+                <h3 class="section-title">🏆 Top Contributors</h3>
                 <div class="leaderboard-list">
                     {% for person in leaderboard %}
                     <div class="leaderboard-item">
@@ -91,60 +126,51 @@
                     {% endfor %}
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Live Subject Chat Sidebar -->
-            <div class="chat-sidebar">
-                <div class="chat-sidebar-header">
-                    <div style="font-weight:600;font-size:15px;"><i class="fas fa-comments"></i> Subject Chat</div>
-                    {% if my_groups %}
-                    <div class="group-select-row">
-                        <select id="groupSelect">
-                            {% for g in my_groups %}
-                            <option value="{{ g.group_id }}" data-admin="{{ 'true' if g.is_admin else 'false' }}">{{ g.group_name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    {% else %}
-                    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Join a community group to chat</div>
-                    {% endif %}
-                    
-                    <!-- Admin controls (shown when admin of selected group) -->
-                    <div id="adminGroupControls" style="display:none;margin-top:8px;">
-                        <details>
-                            <summary style="font-size:12px;cursor:pointer;color:var(--accent-2);">⚙️ Admin: Manage Members</summary>
-                            <div id="groupMembersList" style="margin-top:6px;font-size:12px;"></div>
-                            <div style="display:flex;gap:6px;margin-top:6px;">
-                                <input id="addMemberIdInput" type="number" placeholder="User ID to add" style="flex:1;padding:4px 8px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-size:12px;">
-                                <button onclick="addGroupMember()" style="padding:4px 10px;background:var(--primary);color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;">Add</button>
-                            </div>
-                        </details>
-                    </div>
-                </div>
+    </div>
 
-                <div class="chat-messages" id="commChatMessages">
-                    {% if not my_groups %}
-                    <div style="text-align:center;color:var(--text-muted);font-size:13px;padding:20px;">Join a group to see chat</div>
-                    {% endif %}
+    <!-- Create Group Modal -->
+    <div class="modal" id="createGroupModal" style="display:none;">
+        <div class="modal-content" style="max-width:400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Create Community</h2>
+                <button class="modal-close" onclick="closeCreateModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom:15px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px; color:var(--text-muted);">COMMUNITY NAME</label>
+                    <input type="text" id="groupNameInput" class="form-input" placeholder="e.g. Python Developers" style="width:100%;">
                 </div>
-
-                <div class="chat-input-row">
-                    <input type="text" id="commChatInput" placeholder="Type a message..." maxlength="500" {% if not my_groups %}disabled{% endif %}>
-                    <button id="commSendBtn" {% if not my_groups %}disabled{% endif %}><i class="fas fa-paper-plane"></i></button>
+                <div style="margin-bottom:15px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px; color:var(--text-muted);">DESCRIPTION</label>
+                    <textarea id="groupDescInput" class="form-input" rows="3" placeholder="What is this group about?" style="width:100%;"></textarea>
                 </div>
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px; color:var(--text-muted);">VISIBILITY</label>
+                    <select id="groupTypeInput" class="form-input" style="width:100%;">
+                        <option value="public">Public (Anyone can join)</option>
+                        <option value="private">Private (Admin approval required)</option>
+                    </select>
+                </div>
+                <button onclick="confirmCreateGroup()" class="add-friend-btn" style="width:100%; justify-content:center;">
+                    Create Community
+                </button>
             </div>
         </div>
     </div>
 
     <!-- Search Users Modal -->
     <div class="modal" id="searchUserModal" style="display:none;">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width:400px;">
             <div class="modal-header">
                 <h2 class="modal-title">Find Users</h2>
                 <button class="modal-close" onclick="document.getElementById('searchUserModal').style.display='none'"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body">
-                <input type="text" id="userSearchInput" class="form-input" placeholder="Search by name or username..." style="margin-bottom:12px;">
-                <div id="userSearchResults"></div>
+                <input type="text" id="userSearchInput" class="form-input" placeholder="Search by name or username..." style="margin-bottom:12px; width:100%;">
+                <div id="userSearchResults" style="max-height:300px; overflow-y:auto;"></div>
             </div>
         </div>
     </div>
@@ -162,188 +188,115 @@
 const MY_USER_ID  = {{ user.user_id }};
 const MY_NAME     = "{{ user.profilename }}";
 
-// Active subject + group
-let activeSubject = 'general';
-let activeGroupId = {{ my_groups[0].group_id if my_groups else 'null' }};
+// ── Feed: Load Discovery ──────────────────────────────────────
+const discoveryData = {{ discovery|tojson }};
+const myFollowedUsers = []; // Will be loaded via API
 
-// ── Socket.IO ─────────────────────────────────────────────────
-const socket = io();
+window.addEventListener('load', () => {
+    renderDiscoveryGrid();
+    loadFollowingStrip();
+});
 
-if (activeGroupId) {
-    joinCommunityRoom();
-}
-
-function joinCommunityRoom() {
-    socket.emit('join_community_room', { subject: activeSubject, group_id: activeGroupId });
-    loadChatHistory();
-}
-
-socket.on('community_new_message', (data) => {
-    if (data.subject === activeSubject) {
-        appendCommMsg(data.username, data.message, data.time, data.user_id === MY_USER_ID);
+function renderDiscoveryGrid() {
+    const grid = document.getElementById('discoveryGrid');
+    if (discoveryData.length === 0) {
+        grid.innerHTML = `<div style="grid-column:1/-1; padding:40px; text-align:center; color:var(--text-muted);">No other communities found. Create the first one!</div>`;
+        return;
     }
-});
-socket.on('community_user_joined', (data) => appendCommSystem(data.message));
-socket.on('community_user_left',   (data) => appendCommSystem(data.message));
 
-// ── Subject Tab Switching ─────────────────────────────────────
-document.querySelectorAll('.subj-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-        if (activeGroupId) {
-            socket.emit('leave_community_room', { subject: activeSubject, group_id: activeGroupId });
+    grid.innerHTML = discoveryData.map(g => {
+        let btnHtml = '';
+        if (g.my_status === 'pending') {
+            btnHtml = `<button class="join-btn pending" disabled>Pending...</button>`;
+        } else if (g.my_status === 'approved') {
+            btnHtml = `<button onclick="window.location.href='/group/${g.group_id}'" class="join-btn" style="background:var(--accent-3);">Enter</button>`;
+        } else {
+            btnHtml = `<button onclick="joinGroup(${g.group_id}, '${g.type}')" class="join-btn">${g.type === 'public' ? 'Join Now' : 'Request Join'}</button>`;
         }
-        document.querySelectorAll('.subj-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        activeSubject = tab.dataset.subject;
-        document.getElementById('commChatMessages').innerHTML = '';
-        if (activeGroupId) joinCommunityRoom();
-    });
-});
 
-// ── Group Switching ───────────────────────────────────────────
-const groupSelect = document.getElementById('groupSelect');
-if (groupSelect) {
-    groupSelect.addEventListener('change', () => {
-        if (activeGroupId) {
-            socket.emit('leave_community_room', { subject: activeSubject, group_id: activeGroupId });
-        }
-        activeGroupId = groupSelect.value;
-        document.getElementById('commChatMessages').innerHTML = '';
-        checkAdminControls();
-        joinCommunityRoom();
-    });
-    checkAdminControls();
+        return `
+            <div class="community-card">
+                <div class="cc-header">
+                    <span class="cc-badge ${g.type}">${g.type}</span>
+                </div>
+                <div class="cc-title">${g.group_name}</div>
+                <div class="cc-desc">${g.description || 'No description provided.'}</div>
+                <div class="cc-meta">
+                    <span><i class="fas fa-user-shield"></i> ${g.admin_name}</span>
+                    <span><i class="fas fa-users"></i> ${g.member_count} members</span>
+                </div>
+                <div class="cc-footer">
+                    ${btnHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
-function checkAdminControls() {
-    if (!groupSelect) return;
-    const sel  = groupSelect.options[groupSelect.selectedIndex];
-    const isAdmin = sel && sel.dataset.admin === 'true';
-    document.getElementById('adminGroupControls').style.display = isAdmin ? 'block' : 'none';
-    if (isAdmin) loadGroupMembers();
-}
-
-// ── Chat Send ─────────────────────────────────────────────────
-const commInput = document.getElementById('commChatInput');
-document.getElementById('commSendBtn').addEventListener('click', sendCommMsg);
-commInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendCommMsg(); });
-
-function sendCommMsg() {
-    const msg = commInput.value.trim();
-    if (!msg || !activeGroupId) return;
-    socket.emit('community_send_message', { group_id: activeGroupId, subject: activeSubject, message: msg });
-    commInput.value = '';
-}
-
-function appendCommMsg(username, message, time, isMe) {
-    const box = document.getElementById('commChatMessages');
-    const div = document.createElement('div');
-    div.className = `chat-msg ${isMe ? 'mine' : ''}`;
-    div.innerHTML = `
-        ${!isMe ? `<div class="msg-author">${username}</div>` : ''}
-        <div class="msg-bubble">${escHtml(message)}</div>
-        <div class="msg-time">${time}</div>
-    `;
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-}
-
-function appendCommSystem(text) {
-    const box = document.getElementById('commChatMessages');
-    const div = document.createElement('div');
-    div.style.cssText = 'text-align:center;font-size:11px;color:var(--text-muted);padding:3px;';
-    div.textContent = text;
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-}
-
-function loadChatHistory() {
-    if (!activeGroupId) return;
-    fetch(`/api/get-chat-history?group_id=${activeGroupId}&subject=${activeSubject}`)
+function joinGroup(groupId, type) {
+    const fd = new FormData();
+    fd.append('group_id', groupId);
+    fetch('/api/join-group', { method: 'POST', body: fd })
         .then(r => r.json())
-        .then(msgs => {
-            msgs.forEach(m => appendCommMsg(m.username, m.message, m.time, m.user_id === MY_USER_ID));
+        .then(d => {
+            if (d.success) {
+                if (d.status === 'approved') {
+                    window.location.href = `/group/${groupId}`;
+                } else {
+                    alert('Request sent to admin!');
+                    window.location.reload();
+                }
+            } else alert(d.error);
         });
 }
 
-// ── Feed: Load Posts ──────────────────────────────────────────
-function loadPosts(subject = 'all') {
-    fetch(`/api/get-posts?subject=${subject}`)
+// ── Create Group Logic ──
+function openCreateModal() { document.getElementById('createGroupModal').style.display = 'flex'; }
+function closeCreateModal() { document.getElementById('createGroupModal').style.display = 'none'; }
+
+function confirmCreateGroup() {
+    const name = document.getElementById('groupNameInput').value.trim();
+    const desc = document.getElementById('groupDescInput').value.trim();
+    const type = document.getElementById('groupTypeInput').value;
+    
+    if (!name) return alert('Group name is required!');
+    
+    const fd = new FormData();
+    fd.append('group_name', name);
+    fd.append('group_description', desc);
+    fd.append('type', type);
+    
+    fetch('/api/create-group', { method: 'POST', body: fd })
         .then(r => r.json())
-        .then(posts => {
-            const el = document.getElementById('feedPosts');
-            if (posts.length === 0) {
-                el.innerHTML = '<div style="color:var(--text-muted);padding:20px;text-align:center;">No posts yet — be the first!</div>';
+        .then(d => {
+            if (d.success) {
+                window.location.href = `/group/${d.group_id}`;
+            } else alert(d.error);
+        });
+}
+
+// ── Following Strip Fix ──
+function loadFollowingStrip() {
+    fetch('/api/get-following')
+        .then(r => r.json())
+        .then(users => {
+            const list = document.getElementById('followingList');
+            if (users.length === 0) {
+                list.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:10px;">You are not following anyone yet.</div>';
                 return;
             }
-            el.innerHTML = posts.map(p => `
-                <div class="post-card">
-                    <div class="post-header">
-                        <div class="post-avatar">${p.username[0].toUpperCase()}</div>
-                        <div class="post-user-info">
-                            <div class="post-username">${p.username}</div>
-                            <div class="post-time">${p.time} • ${subjectEmoji(p.subject)} ${p.subject}</div>
-                        </div>
-                    </div>
-                    <div class="post-content">${escHtml(p.content)}</div>
-                    <div class="post-actions">
-                        <button class="post-action-btn" onclick="likePost(${p.post_id}, this)">
-                            <i class="far fa-heart"></i><span>${p.likes}</span>
-                        </button>
-                        <button class="post-action-btn">
-                            <i class="far fa-comment"></i><span>${p.comments}</span>
-                        </button>
-                    </div>
+            list.innerHTML = users.map(u => `
+                <div class="friend-item" onclick="window.location.href='/profile/${u.user_id}'">
+                    <div class="friend-av">${u.name[0].toUpperCase()}</div>
+                    <div class="friend-name">${u.name}</div>
                 </div>
             `).join('');
         });
 }
 
-loadPosts();
-
-// Feed filter buttons
-document.querySelectorAll('.feed-filters .filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.feed-filters .filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        loadPosts(btn.dataset.filter);
-    });
-});
-
-// Create post
-document.getElementById('createPostBtn').addEventListener('click', () => {
-    const content = document.getElementById('createPostInput').value.trim();
-    const subject = document.getElementById('postSubjectSelect').value;
-    if (!content) return alert('Post cannot be empty!');
-    const fd = new FormData();
-    fd.append('content', content);
-    fd.append('subject', subject);
-    fetch('/api/create-post', { method: 'POST', body: fd })
-        .then(r => r.json())
-        .then(d => {
-            if (d.success) {
-                document.getElementById('createPostInput').value = '';
-                loadPosts();
-            }
-        });
-});
-
-// Like post
-function likePost(postId, btn) {
-    const fd = new FormData();
-    fd.append('post_id', postId);
-    fetch('/api/like-post', { method: 'POST', body: fd })
-        .then(r => r.json())
-        .then(d => {
-            btn.querySelector('i').className = d.liked ? 'fas fa-heart' : 'far fa-heart';
-            btn.querySelector('span').textContent = d.count;
-            if (d.liked) btn.classList.add('liked'); else btn.classList.remove('liked');
-        });
-}
-
-// ── Follow/Unfollow ───────────────────────────────────────────
+// ── Follow/Unfollow Logic ──
 function toggleFollow(targetUserId, btn) {
-    const isFollowing = btn.dataset.following === 'true';
+    const isFollowing = btn.getAttribute('data-following') === 'true';
     const url = isFollowing ? '/api/unfollow' : '/api/follow';
     const fd  = new FormData();
     fd.append('user_id', targetUserId);
@@ -351,23 +304,21 @@ function toggleFollow(targetUserId, btn) {
         .then(r => r.json())
         .then(d => {
             if (d.success) {
-                btn.dataset.following = isFollowing ? 'false' : 'true';
-                btn.textContent = isFollowing ? 'Follow' : 'Following';
-                btn.style.background = isFollowing ? 'transparent' : 'var(--primary)';
-                btn.style.color = isFollowing ? 'var(--primary)' : 'white';
+                const newStatus = !isFollowing;
+                btn.setAttribute('data-following', newStatus ? 'true' : 'false');
+                btn.textContent = newStatus ? 'Following' : 'Follow';
+                btn.style.background = newStatus ? 'var(--primary)' : 'transparent';
+                btn.style.color = newStatus ? 'white' : 'var(--primary)';
+                loadFollowingStrip();
             }
         });
 }
 
-// ── Following list strip ──────────────────────────────────────
-// (Show people you follow at top)
-fetch('/api/dashboard-stats')  // piggyback — just to have dynamic data
-    .catch(() => {});
-
-// ── Search Users ──────────────────────────────────────────────
+// ── Search Users Logic ──
 document.getElementById('searchUserBtn').onclick = () => {
     document.getElementById('searchUserModal').style.display = 'flex';
 };
+
 let searchTimer;
 document.getElementById('userSearchInput').addEventListener('input', (e) => {
     clearTimeout(searchTimer);
@@ -378,12 +329,12 @@ document.getElementById('userSearchInput').addEventListener('input', (e) => {
             .then(r => r.json())
             .then(users => {
                 document.getElementById('userSearchResults').innerHTML = users.map(u => `
-                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-color);">
                         <div>
-                            <div style="font-weight:600;">${u.name}</div>
+                            <div style="font-weight:600; font-size:14px;">${u.name}</div>
                             <div style="font-size:12px;color:var(--text-muted);">@${u.username}</div>
                         </div>
-                        <button onclick="followFromSearch(${u.user_id}, this)" style="padding:4px 12px;border-radius:50px;border:1px solid var(--primary);background:transparent;color:var(--primary);cursor:pointer;">Follow</button>
+                        <button onclick="followFromSearch(${u.user_id}, this)" style="padding:4px 12px;border-radius:50px;border:1px solid var(--primary);background:transparent;color:var(--primary);cursor:pointer;font-size:12px;">Follow</button>
                     </div>
                 `).join('');
             });
@@ -396,47 +347,13 @@ function followFromSearch(userId, btn) {
     fetch('/api/follow', { method: 'POST', body: fd })
         .then(r => r.json())
         .then(d => {
-            if (d.success) { btn.textContent = 'Following'; btn.disabled = true; }
-        });
-}
-
-// ── Admin Group Member Management ────────────────────────────
-function loadGroupMembers() {
-    if (!activeGroupId) return;
-    fetch(`/api/get-group-members?group_id=${activeGroupId}`)
-        .then(r => r.json())
-        .then(members => {
-            document.getElementById('groupMembersList').innerHTML = members.map(m => `
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;">
-                    <span>${m.name} (${m.stacks} stacks)</span>
-                    <button onclick="removeGroupMember(${m.user_id})" style="padding:2px 6px;background:var(--accent-2);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">Remove</button>
-                </div>
-            `).join('');
-        });
-}
-
-function addGroupMember() {
-    const memberId = document.getElementById('addMemberIdInput').value.trim();
-    if (!memberId) return;
-    const fd = new FormData();
-    fd.append('group_id', activeGroupId);
-    fd.append('member_id', memberId);
-    fetch('/api/add-group-member', { method: 'POST', body: fd })
-        .then(r => r.json())
-        .then(d => {
-            if (d.success) { alert('Member added!'); loadGroupMembers(); }
-            else alert(d.error);
-        });
-}
-
-function removeGroupMember(memberId) {
-    const fd = new FormData();
-    fd.append('group_id', activeGroupId);
-    fd.append('member_id', memberId);
-    fetch('/api/remove-group-member', { method: 'POST', body: fd })
-        .then(r => r.json())
-        .then(d => {
-            if (d.success) loadGroupMembers();
+            if (d.success) { 
+                btn.textContent = 'Following'; 
+                btn.disabled = true; 
+                btn.style.background = 'var(--primary)';
+                btn.style.color = 'white';
+                loadFollowingStrip(); 
+            }
         });
 }
 
@@ -445,10 +362,6 @@ function escHtml(str) {
     const d = document.createElement('div');
     d.appendChild(document.createTextNode(str));
     return d.innerHTML;
-}
-function subjectEmoji(subject) {
-    const map = {physics:'🔬', chemistry:'🧪', math:'📐', biology:'🧬', coding:'💻', general:'📚'};
-    return map[subject] || '📚';
 }
 </script>
 {% endblock %}

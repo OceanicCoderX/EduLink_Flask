@@ -249,20 +249,24 @@ def handle_community_message(data):
     subject    = data.get('subject', 'general')
     group_id   = str(data.get('group_id'))
     message    = data.get('message', '').strip()
+    file_url   = data.get('file_url')
+    file_name  = data.get('file_name')
+    file_type  = data.get('file_type')
+    
     room_key   = f"community_{group_id}_{subject}"
     user_id    = session.get('user_id')
     username   = session.get('profilename', 'User')
     profession = session.get('profession', 'Student')
 
-    if not message:
+    if not message and not file_url:
         return
 
     try:
         mydb   = get_db_connection()
         cursor = mydb.cursor()
         cursor.execute(
-            "INSERT INTO community_messages (group_id, user_id, subject, message) VALUES (%s, %s, %s, %s)",
-            (group_id, user_id, subject, message)
+            "INSERT INTO community_messages (group_id, user_id, subject, message, file_url, file_name, file_type) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (group_id, user_id, subject, message, file_url, file_name, file_type)
         )
         mydb.commit()
         cursor.close()
@@ -276,6 +280,9 @@ def handle_community_message(data):
         'profession': profession,
         'subject':    subject,
         'message':    message,
+        'file_url':   file_url,
+        'file_name':  file_name,
+        'file_type':  file_type,
         'time':       datetime.now().strftime("%I:%M %p")
     }, to=room_key)
 

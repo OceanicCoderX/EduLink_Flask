@@ -321,8 +321,8 @@
                     <textarea class="sm-input" id="editGroupDesc" rows="3" {% if not group.is_admin %}disabled{% endif %}>{{ group.description }}</textarea>
                     
                     {% if group.is_admin %}
-                    <button class="sm-btn sm-btn-primary" onclick="saveGroupInfo()">Save Changes</button>
-                    <!-- Admin can't leave their own group natively unless they transfer, so we just hide the button -->
+                    <button class="sm-btn sm-btn-primary" onclick="saveGroupInfo()" style="margin-bottom:10px;">Save Changes</button>
+                    <button class="sm-btn sm-btn-danger" onclick="deleteCommunity()" style="background:#dc3545; color:white;">Delete Community</button>
                     {% else %}
                     <button class="sm-btn sm-btn-danger" onclick="leaveGroup()">Leave Group</button>
                     {% endif %}
@@ -554,6 +554,21 @@ function leaveGroup() {
     }
 }
 
+function deleteCommunity() {
+    if(confirm('CRITICAL: Are you sure you want to DELETE this entire community? This cannot be undone.')) {
+        const fd = new FormData();
+        fd.append('group_id', GROUP_ID);
+        fetch('/api/delete-group', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(d => {
+                if(d.success) {
+                    alert('Community deleted.');
+                    window.location.href = '/community';
+                } else alert(d.error);
+            });
+    }
+}
+
 function loadGroupMembers() {
     fetch(`/api/get-group-members?group_id=${GROUP_ID}`)
         .then(r => r.json())
@@ -610,20 +625,21 @@ function loadGroupRequests() {
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-primary);">
                     <div>
                         <div style="font-weight:600; font-size:14px;">${r.user_name}</div>
-                        <div style="font-size:11px; color:var(--text-muted);">Requested to join</div>
+                        <div style="font-size:11px; color:var(--text-muted);">Requested on ${r.date}</div>
                     </div>
                     <div style="display:flex; gap:6px;">
-                        <button onclick="handleRequest(${r.request_id}, 'approve')" style="padding:4px 8px; background:var(--success, #28a745); color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-check"></i></button>
-                        <button onclick="handleRequest(${r.request_id}, 'reject')" style="padding:4px 8px; background:var(--accent-2); color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+                        <button onclick="handleRequest(${r.user_id}, 'approve')" style="padding:10px; background:#2dce89; color:white; border:none; border-radius:8px; cursor:pointer;"><i class="fas fa-check"></i></button>
+                        <button onclick="handleRequest(${r.user_id}, 'reject')" style="padding:10px; background:#f5365c; color:white; border:none; border-radius:8px; cursor:pointer;"><i class="fas fa-times"></i></button>
                     </div>
                 </div>
             `).join('');
         });
 }
 
-function handleRequest(reqId, action) {
+function handleRequest(userId, action) {
     const fd = new FormData();
-    fd.append('request_id', reqId);
+    fd.append('group_id', GROUP_ID);
+    fd.append('user_id', userId);
     fd.append('action', action);
     fetch('/api/handle-group-request', { method: 'POST', body: fd })
         .then(r => r.json())
