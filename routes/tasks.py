@@ -212,6 +212,18 @@ def award_focus_interval():
     Rule 8a: +1 Stack per 10 minutes of continuous activity.
     """
     user_id = session['user_id']
+    
+    # Rule 8a: Record 10 mins in focus table
+    mydb   = get_db_connection()
+    cursor = mydb.cursor()
+    cursor.execute("""
+        INSERT INTO focus (user_id, task_name, duration_minutes, sessions_count, stacks_earned)
+        VALUES (%s, 'General Study (Auto-tracked)', 10, 0, 1)
+    """, (user_id,))
+    mydb.commit()
+    cursor.close()
+    mydb.close()
+
     result  = award_stack(user_id, 'focus_interval', 1)
     session['stacks'] = result.get('new_total', session.get('stacks', 0))
     return jsonify(result)
