@@ -92,53 +92,6 @@
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
-<script>
-// Dashboard stats — DB se fetch karo
-fetch('/api/dashboard-stats')
-    .then(r => r.json())
-    .then(data => {
-        document.getElementById('totalStudyTime').textContent  = data.total_hours + 'h';
-        document.getElementById('tasksCompleted').textContent  = data.completed_tasks;
-        document.getElementById('pomodoroSessions').textContent = data.total_sessions;
-        document.getElementById('totalStacks').textContent     = data.total_stacks;
-
-        // Recent tasks render
-        const tl = document.getElementById('recentTasksList');
-        if (data.recent_tasks.length === 0) {
-            tl.innerHTML = '<div style="color:var(--text-muted);padding:16px;">No tasks yet</div>';
-        } else {
-            tl.innerHTML = data.recent_tasks.map(t => `
-                <div class="task-item">
-                    <div class="task-checkbox ${t.status === 'completed' ? 'checked' : ''}">
-                        ${t.status === 'completed' ? '<i class="fas fa-check"></i>' : ''}
-                    </div>
-                    <div class="task-content">
-                        <div class="task-title">${t.title}</div>
-                        <div class="task-meta">
-                            <span class="task-category study">${t.priority || 'normal'}</span>
-                            <span><i class="far fa-calendar"></i> ${t.due_date}</span>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // Recent notes render
-        const nl = document.getElementById('recentNotesList');
-        if (data.recent_notes.length === 0) {
-            nl.innerHTML = '<div style="color:var(--text-muted);padding:16px;">No notes yet</div>';
-        } else {
-            nl.innerHTML = data.recent_notes.map(n => `
-                <div class="note-item">
-                    <div class="note-title">${n.title}</div>
-                    <div class="note-meta">
-                        <span><i class="far fa-calendar"></i> ${n.date}</span>
-                        <span><i class="far fa-folder"></i> ${n.category}</span>
-                    </div>
-                </div>
-            `).join('');
-        }
-    })
-    .catch(err => console.error('Dashboard stats error:', err));
-</script>
 {% endblock %}
+
+

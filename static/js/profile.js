@@ -34,59 +34,14 @@
             lightThemeBtn.classList.remove('active');
         }
 
+/* 
         // ==========================================
-        // PROFILE DATA MANAGEMENT
+        // PROFILE DATA MANAGEMENT (DISABLED FOR FLASK)
         // ==========================================
-        function loadUserProfile() {
-            const savedProfile = localStorage.getItem('edulink_user_profile');
-            if (savedProfile) {
-                const profile = JSON.parse(savedProfile);
-                
-                // Update form fields
-                document.getElementById('fullName').value = profile.fullName || 'John Doe';
-                document.getElementById('username').value = profile.username || 'johndoe';
-                document.getElementById('email').value = profile.email || 'john@edulink.com';
-                document.getElementById('phone').value = profile.phone || '+91 98765 43210';
-                document.getElementById('location').value = profile.location || 'Mumbai, India';
-                document.getElementById('birthday').value = profile.birthday || '2000-01-15';
-                document.getElementById('bio').value = profile.bio || 'Passionate learner, focused achiever. Studying to make a difference! 🎓';
-                
-                // Update display
-                updateProfileDisplay();
-            }
-        }
-
-        function saveUserProfile() {
-            const profile = {
-                fullName: document.getElementById('fullName').value,
-                username: document.getElementById('username').value,
-                email: document.getElementById('email').value,
-                phone: document.getElementById('phone').value,
-                location: document.getElementById('location').value,
-                birthday: document.getElementById('birthday').value,
-                bio: document.getElementById('bio').value,
-                avatarType: currentAvatarType,
-                avatarData: currentAvatarData,
-                backgroundImage: currentBackgroundImage
-            };
-            
-            localStorage.setItem('edulink_user_profile', JSON.stringify(profile));
-        }
-
-        function updateProfileDisplay() {
-            const fullName = document.getElementById('fullName').value;
-            const username = document.getElementById('username').value;
-            const location = document.getElementById('location').value;
-            const bio = document.getElementById('bio').value;
-            
-            document.getElementById('displayName').textContent = fullName;
-            document.getElementById('displayUsername').textContent = '@' + username;
-            document.getElementById('displayLocation').textContent = location;
-            document.getElementById('displayBio').textContent = bio;
-            
-            // Update sidebar
-            document.querySelector('.profile-name').textContent = fullName;
-        }
+        function loadUserProfile() { ... }
+        function saveUserProfile() { ... }
+        function updateProfileDisplay() { ... }
+        */
 
         // Mobile Sidebar Toggle
         const sidebar = document.getElementById('sidebar');

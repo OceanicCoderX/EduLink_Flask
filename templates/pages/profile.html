@@ -423,7 +423,7 @@
 </div>
 
 <!-- Hidden File Inputs -->
-<input type="file" id="backgroundUpload" accept="image/*" style="display:none">
+<input type="file" id="backgroundUpload" accept="image/*" style="display:none" onchange="uploadBackground(this)">
 {% endblock %}
 
 {% block extra_js %}
@@ -646,11 +646,196 @@ function submitDeleteAccount() {
     });
 }
 
-// Real-time follower count (SocketIO)
+// ── Background / Cover Image ──
+
+function changeBackground() {
+  document.getElementById('backgroundUpload').click();
+}
+
+function uploadBackground(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image size should be less than 5MB', 'error');
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append('coverPicInput', file);
+    // Add dummy values for required fields in update-profile if needed, 
+    // but the backend handles partial updates.
+    
+    showToast('Uploading background...', 'info');
+
+    fetch('/api/update-profile', { method:'POST', body:fd })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          showToast('Background updated!', 'success');
+          // Update preview
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = document.getElementById('backgroundImage');
+            if (img) {
+              img.src = e.target.result;
+              img.style.display = 'block';
+            }
+          };
+          reader.readAsDataURL(file);
+        } else {
+          showToast(d.error || 'Upload failed', 'error');
+        }
+      })
+      .catch(() => showToast('Network error during upload', 'error'));
+  }
+}
+
+function shareProfile() {
+  const username = '{{ profile.username }}';
+  const profileUrl = window.location.origin + '/profile/' + username;
+  
+  const shareData = {
+    title: 'EduLink Profile - ' + '{{ profile.profilename }}',
+    text: 'Check out my profile on EduLink!',
+    url: profileUrl
+  };
+
+  if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+    navigator.share(shareData)
+      .then(() => showToast('Profile shared successfully!', 'success'))
+      .catch((err) => {
+        if (err.name !== 'AbortError') copyToClipboard(profileUrl);
+      });
+  } else {
+    copyToClipboard(profileUrl);
+  }
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Profile link copied to clipboard!', 'success');
+  }).catch(() => {
+    showToast('Failed to copy link', 'error');
+  });
+}
+
+// ── Export Functions ──
+
+function exportAsImage() {
+  const element = document.getElementById('profileContent');
+  if (!element) return;
+  
+  showToast('Generating image...', 'info');
+  
+  // Temporarily hide elements we don't want in the image
+  const actions = document.querySelector('.profile-actions');
+  const editSec = document.getElementById('editSection');
+  if (actions) actions.style.display = 'none';
+  if (editSec) editSec.style.display = 'none';
+
+  html2canvas(element, {
+    useCORS: true,
+    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-secondary'),
+    scale: 2
+  }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = `EduLink_Profile_{{ profile.username }}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    
+    if (actions) actions.style.display = 'flex';
+    if (editSec) editSec.style.display = 'block';
+    
+    closeModal('exportModal');
+    showToast('Profile exported as image!', 'success');
+  }).catch(err => {
+    console.error('Export Error:', err);
+    showToast('Failed to export image', 'error');
+    if (actions) actions.style.display = 'flex';
+    if (editSec) editSec.style.display = 'block';
+  });
+}
+
+function exportAsPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  
+  const name     = '{{ profile.profilename }}';
+  const username = '@{{ profile.username }}';
+  const email    = '{{ profile.email }}';
+  const bio      = '{{ profile.bio }}'.replace(/\n/g, ' ');
+  const stacks   = '{{ profile.stacks }}';
+  const streak   = '{{ profile.streak }}';
+  
+  doc.setFontSize(22);
+  doc.setTextColor(94, 114, 228); // Primary color
+  doc.text('EduLink Profile', 20, 25);
+  
+  doc.setFontSize(18);
+  doc.setTextColor(30, 30, 30);
+  doc.text(name, 20, 40);
+  
+  doc.setFontSize(14);
+  doc.setTextColor(120, 120, 120);
+  doc.text(username, 20, 50);
+  doc.text(email, 20, 60);
+  
+  doc.setDrawColor(230, 230, 230);
+  doc.line(20, 70, 190, 70);
+  
+  doc.setFontSize(12);
+  doc.setTextColor(60, 60, 60);
+  doc.text('About:', 20, 80);
+  const splitBio = doc.splitTextToSize(bio, 170);
+  doc.text(splitBio, 20, 90);
+  
+  doc.text('Statistics:', 20, 120);
+  doc.text(`Total Stacks: ${stacks}`, 30, 130);
+  doc.text(`Current Streak: ${streak} Days`, 30, 140);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(150, 150, 150);
+  doc.text('Generated on ' + new Date().toLocaleDateString(), 20, 280);
+  
+  doc.save(`EduLink_Profile_{{ profile.username }}.pdf`);
+  closeModal('exportModal');
+  showToast('Profile exported as PDF!', 'success');
+}
+
+function exportAsJSON() {
+  const data = {
+    profilename: '{{ profile.profilename }}',
+    username:    '{{ profile.username }}',
+    email:       '{{ profile.email }}',
+    whatsapp:    '{{ profile.whatsapp }}',
+    profession:  '{{ profile.profession }}',
+    bio:         '{{ profile.bio }}',
+    stats: {
+      stacks: {{ profile.stacks }},
+      streak: {{ profile.streak }},
+      followers: {{ profile.followers }},
+      following: {{ profile.following }}
+    },
+    exported_at: new Date().toISOString()
+  };
+  
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `EduLink_Data_{{ profile.username }}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  closeModal('exportModal');
+  showToast('Data exported as JSON!', 'success');
+}
+
+// SocketIO listener fix
 if (typeof io !== 'undefined') {
   const socket = io();
   socket.on('follower_count_updated', function(data) {
-    if (data.user_id == {{ profile.user_id }}) {
+    if (String(data.user_id) === String('{{ profile.user_id }}')) {
       const el = document.getElementById('followersCount');
       if (el) {
         el.textContent = data.followers;

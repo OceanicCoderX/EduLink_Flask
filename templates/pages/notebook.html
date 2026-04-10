@@ -87,16 +87,16 @@
                         <!-- Editor Toolbar -->
                         <div class="editor-toolbar">
                             <div class="toolbar-group">
-                                <button class="toolbar-btn" title="Insert Image">
+                                <button class="toolbar-btn" title="Insert Image" onclick="triggerMediaUpload('image')">
                                     <i class="fas fa-image"></i>
                                 </button>
-                                <button class="toolbar-btn" title="Insert Link">
+                                <button class="toolbar-btn" title="Insert File" onclick="triggerMediaUpload()">
                                     <i class="fas fa-link"></i>
                                 </button>
-                                <button class="toolbar-btn" title="Insert Code">
+                                <button class="toolbar-btn" title="Insert Code" onclick="formatText('formatBlock', '<pre>')">
                                     <i class="fas fa-code"></i>
                                 </button>
-                                <button class="toolbar-btn" title="Insert Table">
+                                <button class="toolbar-btn" title="Insert Table" onclick="insertTable()">
                                     <i class="fas fa-table"></i>
                                 </button>
                             </div>
@@ -118,25 +118,25 @@
                             <button class="format-btn" onclick="formatText('strikethrough')" title="Strikethrough">
                                 <s>S</s>
                             </button>
-                            <button class="format-btn" title="Quote">
+                            <button class="format-btn" onclick="formatText('insertHTML', '<blockquote>')" title="Quote">
                                 <i class="fas fa-quote-right"></i>
                             </button>
-                            <button class="format-btn" title="Code Block">
+                            <button class="format-btn" onclick="formatText('formatBlock', '<code>')" title="Code Block">
                                 <i class="fas fa-code"></i>
                             </button>
-                            <button class="format-btn" title="Heading">
+                            <button class="format-btn" onclick="formatText('formatBlock', '<h2>')" title="Heading">
                                 H
                             </button>
-                            <button class="format-btn" title="Bullet List">
+                            <button class="format-btn" onclick="formatText('insertUnorderedList')" title="Bullet List">
                                 <i class="fas fa-list-ul"></i>
                             </button>
-                            <button class="format-btn" title="Numbered List">
+                            <button class="format-btn" onclick="formatText('insertOrderedList')" title="Numbered List">
                                 <i class="fas fa-list-ol"></i>
                             </button>
-                            <button class="format-btn" title="Subscript">
+                            <button class="format-btn" onclick="formatText('subscript')" title="Subscript">
                                 x₂
                             </button>
-                            <button class="format-btn" title="Superscript">
+                            <button class="format-btn" onclick="formatText('superscript')" title="Superscript">
                                 x²
                             </button>
 
@@ -144,8 +144,11 @@
 
                         <!-- Editor Content -->
                         <div class="editor-content">
-                            <textarea class="editor-textarea" id="noteContent" placeholder="Start writing your note here..."></textarea>
+                            <div class="editor-textarea" id="noteContent" contenteditable="true" data-placeholder="Start writing your note here..."></div>
                         </div>
+
+                        <!-- Hidden File Input for Media -->
+                        <input type="file" id="noteFileUtils" style="display:none" onchange="uploadNoteMedia(this)">
 
                         <!-- Editor Footer -->
                         <div class="editor-footer">

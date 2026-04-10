@@ -160,6 +160,74 @@ def delete_note():
     return jsonify({"success": True})
 
 
+# ── Save to Drive (Internal) ──────────────────────────────────
+
+@notebook_bp.route('/api/save-to-drive', methods=['POST'])
+@login_required
+def save_to_drive():
+    """Save the current note content as a standalone file in the user's drive."""
+    user_id = session['user_id']
+    title   = request.form.get('notes_title', 'Untitled Note')
+    content = request.form.get('notes_description', '')
+    
+    # Clean title for filename
+    clean_title = "".join([c for c in title if c.isalnum() or c in (' ', '-', '_')]).rstrip()
+    if not clean_title: clean_title = "note"
+    filename = f"{clean_title.replace(' ', '_')}_{uuid.uuid4().hex[:6]}.html"
+    
+    # Path: static/uploads/drive/<user_id>/
+    drive_dir = os.path.join(UPLOAD_BASE, str(user_id), 'drive')
+    os.makedirs(drive_dir, exist_ok=True)
+    file_path = os.path.join(drive_dir, filename)
+    
+    # HTML Wrapper for the note
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>{title} - EduLink Note</title>
+        <style>
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 40px auto; padding: 20px; }}
+            h1 {{ color: #5e72e4; border-bottom: 2px solid #eee; padding-bottom: 10px; }}
+            .meta {{ color: #8898aa; font-size: 0.9em; margin-bottom: 30px; }}
+            .content {{ background: #fff; }}
+            img {{ max-width: 100%; border-radius: 8px; margin: 10px 0; }}
+        </style>
+    </head>
+    <body>
+        <h1>{title}</h1>
+        <div class="meta">Exported from EduLink on {date.today().strftime('%B %d, %Y')}</div>
+        <div class="content">{content}</div>
+    </body>
+    </html>
+    """
+    
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write(html_content)
+        
+    rel_path = f"uploads/{user_id}/drive/{filename}"
+    
+    # Record in uploaded_files for management
+    mydb   = get_db_connection()
+    cursor = mydb.cursor()
+    cursor.execute("""
+        INSERT INTO uploaded_files 
+        (user_id, file_name, file_original, file_type, file_path, file_size)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """, (user_id, filename, f"{title}.html", 'text', rel_path, len(html_content)))
+    mydb.commit()
+    cursor.close(); mydb.close()
+    
+    log_activity(user_id, 'note', f'Saved note "{title}" to Drive')
+    
+    return jsonify({
+        "success": True, 
+        "file_path": "/" + rel_path,
+        "message": f"Saved as {filename} in your Drive"
+    })
+
+
 # ── File Upload API ──────────────────────────────────────────
 
 @notebook_bp.route('/api/upload-file', methods=['POST'])

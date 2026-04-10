@@ -193,7 +193,7 @@ function renderNotesList() {
             'coding': '💻'
         };
 
-        const preview = note.content.substring(0, 60) || 'No content';
+        const preview = (note.content || '').replace(/<[^>]*>/g, '').substring(0, 60) || 'No content';
         const date = new Date(note.updatedAt).toLocaleDateString();
 
         noteItem.innerHTML = `
@@ -209,7 +209,7 @@ function renderNotesList() {
                                 <span>${date}</span>
                             </div>
                         </div>
-                        <button class="delete-note-btn" onclick="deleteNote(${note.id}, event)" style="background: none; border: none; color: var(--accent-2); cursor: pointer; padding: 4px 8px; font-size: 16px;">
+                        <button class="delete-note-btn" onclick="deleteNote('${note.id}', event)" style="background: none; border: none; color: var(--accent-2); cursor: pointer; padding: 4px 8px; font-size: 16px;">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -231,7 +231,9 @@ function selectNote(noteId) {
     document.getElementById('editorContainer').style.display = 'flex';
 
     if (document.getElementById('noteTitleInput')) document.getElementById('noteTitleInput').value = note.title;
-    if (document.getElementById('noteContent')) document.getElementById('noteContent').value = note.content;
+    if (document.getElementById('noteContent')) {
+        document.getElementById('noteContent').innerHTML = note.content;
+    }
     if (document.getElementById('categorySelect')) document.getElementById('categorySelect').value = note.category;
     if (document.getElementById('tagsInput')) document.getElementById('tagsInput').value = note.tags.join(', ');
 
@@ -265,7 +267,7 @@ function manualSaveNote() {
     if (!note) return;
 
     note.title = document.getElementById('noteTitleInput') ? document.getElementById('noteTitleInput').value || 'Untitled Note' : 'Untitled Note';
-    note.content = document.getElementById('noteContent') ? document.getElementById('noteContent').value : '';
+    note.content = document.getElementById('noteContent') ? document.getElementById('noteContent').innerHTML : '';
     note.category = document.getElementById('categorySelect') ? document.getElementById('categorySelect').value : 'general';
     note.tags = document.getElementById('tagsInput') ? document.getElementById('tagsInput').value.split(',').map(t => t.trim()).filter(t => t) : [];
     note.updatedAt = new Date().toISOString();
@@ -290,10 +292,29 @@ function manualSaveNote() {
 
 
 if (document.getElementById('noteTitleInput')) document.getElementById('noteTitleInput').addEventListener('input', markUnsaved);
+
+let lastSelectionRange = null;
 if (document.getElementById('noteContent')) {
-    document.getElementById('noteContent').addEventListener('input', () => {
+    const editor = document.getElementById('noteContent');
+    editor.addEventListener('input', () => {
         updateWordCount();
         markUnsaved();
+    });
+
+    // Save selection range on blur
+    editor.addEventListener('blur', () => {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            lastSelectionRange = selection.getRangeAt(0);
+        }
+    });
+
+    // If focus is regained, restore or update range
+    editor.addEventListener('mouseup', () => {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            lastSelectionRange = selection.getRangeAt(0);
+        }
     });
 }
 if (document.getElementById('categorySelect')) document.getElementById('categorySelect').addEventListener('change', markUnsaved);
@@ -301,7 +322,7 @@ if (document.getElementById('tagsInput')) document.getElementById('tagsInput').a
 
 // Update Word Count
 function updateWordCount() {
-    const content = document.getElementById('noteContent').value;
+    const content = document.getElementById('noteContent').innerText || '';
     const words = content.trim().split(/\s+/).filter(w => w.length > 0).length;
     const chars = content.length;
 
@@ -372,21 +393,13 @@ document.addEventListener('click', () => {
     document.getElementById('exportDropdown').style.display = 'none';
 });
 
-// Save to Google Drive
-document.getElementById('driveBtn').addEventListener('click', () => {
-    alert('Google Drive integration will be available soon!');
-});
-
 // AI Format
-document.getElementById('aiFormatBtn').addEventListener('click', () => {
-    alert('AI formatting feature coming soon! This will structure your notes automatically.');
-});
-
-// Share Note
-document.getElementById('shareNoteBtn').addEventListener('click', () => {
-    alert('Sharing feature coming soon!');
-});
-
+const aiFormatBtn = document.getElementById('aiFormatBtn');
+if (aiFormatBtn) {
+    aiFormatBtn.addEventListener('click', () => {
+        alert('AI formatting feature coming soon! This will structure your notes automatically.');
+    });
+}
 
 // Export Note Function
 function exportNote(format) {
@@ -398,7 +411,8 @@ function exportNote(format) {
     const note = notes.find(n => n.id === currentNoteId);
 
     if (format === 'txt') {
-        const blob = new Blob([note.content], { type: 'text/plain' });
+        const text = (note.content || '').replace(/<[^>]*>/g, '');
+        const blob = new Blob([text], { type: 'text/plain' });
         downloadFile(blob, `${note.title}.txt`);
     }
     else if (format === 'pdf') {
@@ -410,12 +424,13 @@ function exportNote(format) {
                             body { font-family: Arial, sans-serif; padding: 40px; }
                             h1 { color: #5e72e4; }
                             .meta { color: #6c757d; font-size: 14px; margin-bottom: 20px; }
+                            img { max-width: 100%; border-radius: 8px; }
                         </style>
                     </head>
                     <body>
                         <h1>${note.title}</h1>
                         <div class="meta">Category: ${note.category} | Created: ${new Date(note.createdAt).toLocaleDateString()}</div>
-                        <pre style="white-space: pre-wrap; font-family: inherit;">${note.content}</pre>
+                        <div class="content">${note.content}</div>
                     </body>
                     </html>
                 `;
@@ -425,8 +440,8 @@ function exportNote(format) {
         alert('Note exported as HTML. You can open it in browser and print as PDF (Ctrl+P)');
     }
     else if (format === 'excel') {
-        // Create CSV format (Excel compatible)
-        const csv = `Title,Category,Created,Content\n"${note.title}","${note.category}","${new Date(note.createdAt).toLocaleDateString()}","${note.content.replace(/"/g, '""')}"`;
+        const text = (note.content || '').replace(/<[^>]*>/g, '').replace(/"/g, '""');
+        const csv = `Title,Category,Created,Content\n"${note.title}","${note.category}","${new Date(note.createdAt).toLocaleDateString()}","${text}"`;
         const blob = new Blob([csv], { type: 'text/csv' });
         downloadFile(blob, `${note.title}.csv`);
     }
@@ -443,41 +458,125 @@ function downloadFile(blob, filename) {
     URL.revokeObjectURL(url);
 }
 
-// Settings
-const settingsBtn = document.getElementById('settingsBtn');
-if (settingsBtn) {
-    settingsBtn.addEventListener('click', () => {
-        alert('Settings panel will be integrated soon!');
-    });
-}
-
 // Text Formatting
-function formatText(command) {
-    const textarea = document.getElementById('noteContent');
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = textarea.value.substring(start, end);
-
-    let formattedText = '';
-    switch (command) {
-        case 'bold':
-            formattedText = `**${selectedText}**`;
-            break;
-        case 'italic':
-            formattedText = `*${selectedText}*`;
-            break;
-        case 'underline':
-            formattedText = `__${selectedText}__`;
-            break;
-        case 'strikethrough':
-            formattedText = `~~${selectedText}~~`;
-            break;
-        default:
-            formattedText = selectedText;
+function formatText(command, value = null) {
+    if (command === 'createLink') {
+        const url = prompt('Enter the link URL:');
+        if (url) document.execCommand(command, false, url);
+    } else {
+        document.execCommand(command, false, value);
     }
-
-    textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
-    textarea.focus();
-    textarea.setSelectionRange(start, start + formattedText.length);
+    document.getElementById('noteContent').focus();
     markUnsaved();
 }
+
+// Media Upload
+function triggerMediaUpload() {
+    document.getElementById('noteFileUtils').click();
+}
+
+function uploadNoteMedia(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+
+    const fd = new FormData();
+    fd.append('file', file);
+
+    showToast('Uploading media...', 'info');
+
+    fetch('/api/upload-file', { method: 'POST', body: fd })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                if (data.file_type === 'image') {
+                    const imgHtml = `<img src="/static/${data.file_path}" alt="${data.file_original}" style="max-width:100%; border-radius:8px; margin:10px 0;">`;
+                    insertHtmlAtCursor(imgHtml);
+                } else {
+                    const fileHtml = `<a href="/static/${data.file_path}" target="_blank" class="note-file-link" style="display:inline-flex; align-items:center; gap:8px; background:var(--bg-secondary); padding:8px 12px; border-radius:8px; text-decoration:none; color:var(--primary); font-weight:500; margin:5px 0;">
+                        <i class="fas fa-file-alt"></i> ${data.file_original}
+                    </a>`;
+                    insertHtmlAtCursor(fileHtml);
+                }
+                showToast('Media inserted!', 'success');
+                markUnsaved();
+            } else {
+                showToast(data.error || 'Upload failed', 'error');
+            }
+        });
+}
+
+function insertHtmlAtCursor(html) {
+    const editor = document.getElementById('noteContent');
+    const selection = window.getSelection();
+    let range;
+
+    if (lastSelectionRange) {
+        range = lastSelectionRange;
+        // Optional: refocus the editor
+        editor.focus();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    } else if (selection.rangeCount > 0) {
+        range = selection.getRangeAt(0);
+    } else {
+        editor.focus();
+        range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+    }
+
+    range.deleteContents();
+    const node = range.createContextualFragment(html);
+    range.insertNode(node);
+    
+    // Move cursor after the inserted content
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    // Update last range
+    lastSelectionRange = range;
+}
+
+function insertTable() {
+    const rows = prompt('Number of rows:', '3');
+    const cols = prompt('Number of columns:', '3');
+    if (!rows || !cols) return;
+
+    let table = '<table style="width:100%; border-collapse:collapse; margin:10px 0; border:1px solid var(--border-color);">';
+    for (let i = 0; i < rows; i++) {
+        table += '<tr>';
+        for (let j = 0; j < cols; j++) {
+            table += '<td style="border:1px solid var(--border-color); padding:8px; min-width:50px; height:24px;"></td>';
+        }
+        table += '</tr>';
+    }
+    table += '</table><p><br></p>';
+    insertHtmlAtCursor(table);
+    markUnsaved();
+}
+
+// Drive Save
+document.getElementById('driveBtn').addEventListener('click', () => {
+    if (!currentNoteId) {
+        showToast('Please select a note first', 'error');
+        return;
+    }
+    
+    const fd = new FormData();
+    fd.append('notes_title', document.getElementById('noteTitleInput').value);
+    fd.append('notes_description', document.getElementById('noteContent').innerHTML);
+
+    showToast('Saving to Drive...', 'info');
+
+    fetch('/api/save-to-drive', { method: 'POST', body: fd })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                window.open(data.file_path, '_blank');
+            } else {
+                showToast(data.error || 'Failed to save to Drive', 'error');
+            }
+        });
+});
