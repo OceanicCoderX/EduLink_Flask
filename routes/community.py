@@ -404,7 +404,7 @@ def edit_group():
     return jsonify({"success": True})
 
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'zip'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'txt'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -418,10 +418,7 @@ def upload_group_file():
         return jsonify({"success": False, "error": "No selected file"})
         
     if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
         # Use a timestamp to prevent overwrites
-        filename = f"{int(date.today().strftime('%s'))}_{filename}" 
-        # Actually use current timestamp for unique filename
         import time
         filename = f"{int(time.time())}_{secure_filename(file.filename)}"
         

@@ -54,8 +54,9 @@ app.register_blueprint(classroom_bp)
 app.register_blueprint(community_bp)
 app.register_blueprint(friends_bp)
 
-# --- SocketIO Events Import (must be after socketio is created) ---
-import socket_events   # noqa: F401
+# --- SocketIO Events Initialization ---
+import socket_events
+socket_events.init_socket_events(socketio)
 
 # --- Run ---
 if __name__ == "__main__":

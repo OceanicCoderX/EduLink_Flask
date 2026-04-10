@@ -68,6 +68,8 @@
     display: flex;
     flex-direction: column;
     background: var(--bg-secondary);
+    min-width: 0;
+    min-height: 0;
 }
 .chat-header {
     padding: 16px 20px;
@@ -89,6 +91,7 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    min-height: 0;
 }
 .msg-wrapper {
     display: flex;
@@ -441,7 +444,10 @@ async function sendMessage() {
     
     if(!msg && !selectedFile) return;
     
-    input.value = ''; // clear immediately for UX
+    // Disable input and button while sending
+    input.disabled = true;
+    const sendBtn = document.getElementById('sendBtn');
+    sendBtn.disabled = true;
     
     let fileUrl = null, fileName = null, fileType = null;
     
@@ -457,15 +463,19 @@ async function sendMessage() {
                 fileUrl = data.file_url;
                 fileName = data.file_name;
                 fileType = data.file_type;
+                clearFile(); // clear the UI selection
             } else {
                 alert('File upload failed: ' + data.error);
-                return; // Stop if upload failed
+                input.disabled = false;
+                sendBtn.disabled = false;
+                return; // Stop if upload failed, keep message in input
             }
         } catch(e) {
             alert('Error uploading file');
+            input.disabled = false;
+            sendBtn.disabled = false;
             return;
         }
-        clearFile(); // clear the UI selection
     }
     
     // Emit via socket
@@ -477,6 +487,12 @@ async function sendMessage() {
         file_name: fileName,
         file_type: fileType
     });
+
+    // Clear input and re-enable
+    input.value = '';
+    input.disabled = false;
+    sendBtn.disabled = false;
+    input.focus();
 }
 
 function handleFileSelect(e) {
