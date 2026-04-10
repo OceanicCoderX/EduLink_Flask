@@ -7,7 +7,7 @@
 .friend-card { background: var(--bg-secondary); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 12px; transition: transform 0.2s; }
 .friend-card:hover { transform: translateY(-3px); }
 .friend-card-top { display: flex; align-items: center; gap: 14px; }
-.friend-avatar-lg { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--accent-1)); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: white; flex-shrink: 0; }
+.friend-avatar-lg { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--accent-1)); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: white; flex-shrink: 0; overflow: hidden; }
 .friend-name-block .name { font-weight: 700; font-size: 16px; }
 .friend-name-block .username { font-size: 13px; color: var(--text-muted); }
 .badge-row { display: flex; align-items: center; gap: 8px; }
@@ -41,7 +41,12 @@
         <div class="friend-card">
             <!-- Top: Avatar + Name -->
             <div class="friend-card-top">
-                <div class="friend-avatar-lg">{{ f.name[0]|upper }}</div>
+                <div class="friend-avatar-lg"
+                     data-avatar-id="{{ f.avatar_id }}"
+                     data-avatar-url="{{ url_for('static', filename=f.pic) if f.pic else '' }}"
+                     data-initials="{{ f.name[0]|upper }}">
+                  {{ f.name[0]|upper }}
+                </div>
                 <div class="friend-name-block">
                     <div class="name">{{ f.name }}</div>
                     <div class="username">@{{ f.username }}</div>

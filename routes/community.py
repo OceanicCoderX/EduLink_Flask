@@ -61,18 +61,19 @@ def community():
         for r in cursor.fetchall()
     ]
 
-    # Leaderboard with profession
+    # Leaderboard with profession and avatar
     cursor.execute("""
         SELECT u.user_id, u.profilename, u.profile_pic,
                u.profession,
-               COALESCE(u.stacks, 0) AS total_stacks
+               COALESCE(u.stacks, 0) AS total_stacks,
+               u.avatar_id
         FROM users u
         ORDER BY total_stacks DESC
         LIMIT 10
     """)
     leaderboard = [
         {'user_id': r[0], 'name': r[1], 'pic': r[2],
-         'profession': r[3] or 'Student', 'stacks': r[4]}
+         'profession': r[3] or 'Student', 'stacks': r[4], 'avatar_id': r[5]}
         for r in cursor.fetchall()
     ]
 
@@ -501,7 +502,8 @@ def get_group_members():
 
     cursor.execute("""
         SELECT u.user_id, u.profilename, u.profile_pic,
-               u.profession, COALESCE(u.stacks, 0) AS stacks
+               u.profession, COALESCE(u.stacks, 0) AS stacks,
+               u.avatar_id
         FROM group_members gm
         JOIN users u ON u.user_id = gm.member_id
         WHERE gm.group_id=%s
@@ -512,7 +514,7 @@ def get_group_members():
 
     return jsonify([
         {'user_id': r[0], 'name': r[1], 'pic': r[2],
-         'profession': r[3] or 'Student', 'stacks': r[4]}
+         'profession': r[3] or 'Student', 'stacks': r[4], 'avatar_id': r[5]}
         for r in rows
     ])
 
@@ -559,7 +561,7 @@ def get_following():
     cursor = mydb.cursor()
     
     cursor.execute("""
-        SELECT u.user_id, u.profilename, u.profile_pic, u.profession
+        SELECT u.user_id, u.profilename, u.profile_pic, u.profession, u.avatar_id
         FROM users u
         JOIN follows f ON f.following_id = u.user_id
         WHERE f.follower_id = %s
@@ -569,7 +571,7 @@ def get_following():
     cursor.close(); mydb.close()
     
     return jsonify([
-        {'user_id': r[0], 'name': r[1], 'pic': r[2], 'profession': r[3] or 'Student'}
+        {'user_id': r[0], 'name': r[1], 'pic': r[2], 'profession': r[3] or 'Student', 'avatar_id': r[4]}
         for r in rows
     ])
 
@@ -622,7 +624,7 @@ def search_users():
     cursor  = mydb.cursor()
 
     cursor.execute("""
-        SELECT user_id, profilename, username, profile_pic, profession
+        SELECT user_id, profilename, username, profile_pic, profession, avatar_id
         FROM users
         WHERE (profilename LIKE %s OR username LIKE %s) AND user_id != %s
         LIMIT 10
@@ -632,6 +634,6 @@ def search_users():
 
     return jsonify([
         {'user_id': r[0], 'name': r[1], 'username': r[2],
-         'pic': r[3], 'profession': r[4] or 'Student'}
+         'pic': r[3], 'profession': r[4] or 'Student', 'avatar_id': r[5]}
         for r in rows
     ])

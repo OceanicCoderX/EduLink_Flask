@@ -42,7 +42,8 @@ def friends_stack():
                u.profession,
                COALESCE(u.stacks, 0)           AS total_stacks,
                COALESCE(SUM(f.sessions_count),0) AS total_sessions,
-               COALESCE(SUM(f.duration_minutes),0) AS total_minutes
+               COALESCE(SUM(f.duration_minutes),0) AS total_minutes,
+               u.avatar_id
         FROM follows fl
         JOIN users u ON u.user_id = fl.following_id
         LEFT JOIN focus f ON f.user_id = u.user_id
@@ -78,7 +79,8 @@ def friends_stack():
             'hours':               round(float(r[8]) / 60, 1),
             'rank':                rank,
             'badge':               badge,
-            'is_following_back':   r[0] in follower_ids
+            'is_following_back':   r[0] in follower_ids,
+            'avatar_id':           r[9]
         })
 
     return render_template('pages/friends_stack.html',
@@ -100,7 +102,8 @@ def get_user_profile(target_user_id):
                COALESCE(SUM(f.sessions_count),0) AS sessions,
                COALESCE(SUM(f.duration_minutes),0) AS minutes,
                (SELECT COUNT(*) FROM follows WHERE following_id=u.user_id) AS followers,
-               (SELECT COUNT(*) FROM follows WHERE follower_id=u.user_id)  AS following
+               (SELECT COUNT(*) FROM follows WHERE follower_id=u.user_id)  AS following,
+               u.avatar_id
         FROM users u
         LEFT JOIN focus f ON f.user_id = u.user_id
         WHERE u.user_id=%s
@@ -128,7 +131,8 @@ def get_user_profile(target_user_id):
         'rank':       rank,
         'badge':      badge,
         'followers':  row[9],
-        'following':  row[10]
+        'following':  row[10],
+        'avatar_id':  row[11]
     })
 
 
@@ -141,7 +145,7 @@ def global_leaderboard():
 
     cursor.execute("""
         SELECT user_id, profilename, profile_pic, profession,
-               COALESCE(stacks, 0) AS total_stacks, streak
+               COALESCE(stacks, 0) AS total_stacks, streak, avatar_id
         FROM users
         ORDER BY total_stacks DESC
         LIMIT 20
@@ -162,7 +166,8 @@ def global_leaderboard():
             'stacks':     stacks,
             'streak':     int(r[5]) if r[5] else 0,
             'rank':       rank,
-            'badge':      badge
+            'badge':      badge,
+            'avatar_id':  r[6]
         })
 
     return jsonify(result)

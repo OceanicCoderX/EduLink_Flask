@@ -137,9 +137,24 @@ const AVATAR_EMOJIS = [
  * Render avatar HTML for a given avatar_id and initials fallback.
  * @param {number} avatarId  - 1-12
  * @param {string} initials  - e.g. "K" (first letter of name)
+ * @param {string} profilePicUrl - Optional full URL to an image
  * @returns {string} HTML
  */
-function renderAvatarHtml(avatarId, initials) {
+function renderAvatarHtml(avatarId, initials, profilePicUrl) {
+    if (profilePicUrl && profilePicUrl.trim() !== '' && !profilePicUrl.includes('undefined') && profilePicUrl !== '/static/') {
+        let finalUrl = profilePicUrl;
+        if (profilePicUrl.startsWith('images/') || profilePicUrl.startsWith('uploads/')) {
+            finalUrl = '/static/' + profilePicUrl;
+        }
+        // Ensure finalUrl actually points to a file, not just a directory
+        if (finalUrl.endsWith('/')) return renderFallbackAvatar(avatarId, initials);
+
+        return `<img src="${finalUrl}" class="avatar-img" alt="Avatar" onerror="this.style.display='none'; this.parentElement.innerHTML = renderFallbackAvatar(${avatarId}, '${initials}')">`;
+    }
+    return renderFallbackAvatar(avatarId, initials);
+}
+
+function renderFallbackAvatar(avatarId, initials) {
     const id    = avatarId || 1;
     const emoji = AVATAR_EMOJIS[id] || '';
     const label = emoji || (initials || 'U').charAt(0).toUpperCase();
@@ -149,9 +164,9 @@ function renderAvatarHtml(avatarId, initials) {
 /**
  * Apply avatar to an element.
  */
-function applyAvatar(element, avatarId, initials) {
+function applyAvatar(element, avatarId, initials, profilePicUrl) {
     if (!element) return;
-    element.innerHTML = renderAvatarHtml(avatarId, initials);
+    element.innerHTML = renderAvatarHtml(avatarId, initials, profilePicUrl);
 }
 
 
@@ -234,7 +249,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('[data-avatar-id]').forEach(el => {
         const id       = parseInt(el.dataset.avatarId) || 1;
         const initials = el.dataset.initials || 'U';
-        applyAvatar(el, id, initials);
+        const url      = el.dataset.avatarUrl || '';
+        applyAvatar(el, id, initials, url);
     });
 });
 

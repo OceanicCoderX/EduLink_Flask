@@ -65,9 +65,6 @@
                 <a href="{{ url_for('community.community') }}" class="nav-item {% if request.endpoint == 'community.community' %}active{% endif %}">
                     <i class="fas fa-user-friends"></i><span>Community</span>
                 </a>
-                <a href="{{ url_for('friends.friends_stack') }}" class="nav-item {% if request.endpoint == 'friends.friends_stack' %}active{% endif %}">
-                    <i class="fas fa-trophy"></i><span>Leaderboard</span>
-                </a>
                 <a href="{{ url_for('profile.profile') }}" class="nav-item {% if request.endpoint == 'profile.profile' %}active{% endif %}">
                     <i class="fas fa-user"></i><span>Profile</span>
                 </a>
@@ -79,6 +76,7 @@
                 <div class="profile-card">
                     <div class="profile-avatar" id="profileAvatar"
                          data-avatar-id="{{ user.get('avatar_id', 1) if user is mapping else 1 }}"
+                         data-avatar-url="{{ url_for('static', filename=user.get('profile_pic')) if user is mapping and user.get('profile_pic') else '' }}"
                          data-initials="{{ (user.profilename or 'U')[0]|upper }}">
                         {{ (user.profilename or 'U')[0]|upper }}
                     </div>

@@ -121,13 +121,17 @@ def update_profile():
     # Handle profile picture upload
     p1 = request.files.get('profilePicInput')
     if p1 and p1.filename:
-        ext        = os.path.splitext(p1.filename)[1]
-        profile_pic = f"user{ext}"
-        upload_dir  = os.path.join('static', 'images', 'users', str(user_id))
+        ext         = os.path.splitext(p1.filename)[1]
+        pic_name    = f"user{ext}"
+        rel_dir     = os.path.join('images', 'users', str(user_id))
+        upload_dir  = os.path.join('static', rel_dir)
         os.makedirs(upload_dir, exist_ok=True)
-        p1.save(os.path.join(upload_dir, profile_pic))
-        cursor.execute("UPDATE users SET profile_pic=%s WHERE user_id=%s", (profile_pic, user_id))
-        session['profile_pic'] = profile_pic
+        p1.save(os.path.join(upload_dir, pic_name))
+        
+        # Store relative path from static/
+        db_path = f"{rel_dir}/{pic_name}".replace("\\", "/")
+        cursor.execute("UPDATE users SET profile_pic=%s WHERE user_id=%s", (db_path, user_id))
+        session['profile_pic'] = db_path
 
     # Handle background picture upload
     b1 = request.files.get('coverPicInput')
@@ -166,9 +170,13 @@ def set_avatar():
 
     mydb   = get_db_connection()
     cursor = mydb.cursor()
-    cursor.execute("UPDATE users SET avatar_id=%s WHERE user_id=%s", (avatar_id, user_id))
+    # When setting an SVG avatar, we clear the custom profile_pic
+    cursor.execute("UPDATE users SET avatar_id=%s, profile_pic='' WHERE user_id=%s", (avatar_id, user_id))
     mydb.commit()
     cursor.close(); mydb.close()
+
+    session['avatar_id']   = avatar_id
+    session['profile_pic'] = ''
 
     return jsonify({"success": True, "avatar_id": avatar_id})
 

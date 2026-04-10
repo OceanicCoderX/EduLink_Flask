@@ -106,7 +106,12 @@
                     {% for person in leaderboard %}
                     <div class="leaderboard-item">
                         <div class="leaderboard-rank {{ 'top' if loop.index <= 3 else 'normal' }}">{{ loop.index }}</div>
-                        <div class="leaderboard-avatar">{{ person.name[0]|upper }}</div>
+                        <div class="leaderboard-avatar" 
+                             data-avatar-id="{{ person.avatar_id }}"
+                             data-avatar-url="{{ url_for('static', filename=person.pic) if person.pic else '' }}"
+                             data-initials="{{ person.name[0]|upper }}">
+                          {{ person.name[0]|upper }}
+                        </div>
                         <div class="leaderboard-info">
                             <div class="leaderboard-name">
                                 {{ person.name }}
@@ -285,12 +290,15 @@ function loadFollowingStrip() {
                 list.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:10px;">You are not following anyone yet.</div>';
                 return;
             }
-            list.innerHTML = users.map(u => `
-                <div class="friend-item" onclick="window.location.href='/profile/${u.user_id}'">
-                    <div class="friend-av">${u.name[0].toUpperCase()}</div>
-                    <div class="friend-name">${u.name}</div>
-                </div>
-            `).join('');
+            list.innerHTML = users.map(u => {
+                const avatarHtml = renderAvatarHtml(u.avatar_id, u.name, u.pic);
+                return `
+                    <div class="friend-item" onclick="window.location.href='/profile/${u.user_id}'">
+                        <div class="friend-avatar">${avatarHtml}</div>
+                        <div class="friend-name">${u.name}</div>
+                    </div>
+                `;
+            }).join('');
         });
 }
 
