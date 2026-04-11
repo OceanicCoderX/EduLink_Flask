@@ -110,12 +110,17 @@ def group_page(group_id):
         cursor.close(); mydb.close()
         return redirect(url_for('community.community', error="unauthorized"))
 
+    # Fetch member count
+    cursor.execute("SELECT COUNT(*) FROM group_members WHERE group_id=%s AND status='approved'", (group_id,))
+    member_count = cursor.fetchone()[0]
+
     group_data = {
         'group_id': group_id,
         'group_name': membership[1],
         'description': membership[2],
         'is_admin': (membership[3] == user_id),
-        'type': membership[4]
+        'type': membership[4],
+        'member_count': member_count
     }
 
     # Fetch user's other joined groups for sidebar

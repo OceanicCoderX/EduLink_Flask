@@ -139,14 +139,16 @@
             </div>
             {% endif %}
             {% for m in members %}
+            {% if m.user_id != user.user_id %}
             <div class="member-dot" id="mdot_{{ m.user_id }}" title="{{ m.name }}">
                 {{ m.name[0]|upper }}
                 <span class="dot-tooltip">{{ m.name }}</span>
             </div>
+            {% endif %}
             {% endfor %}
         </div>
         <span class="member-count" id="memberCount">
-            {{ members|length + 1 }} in room
+            {% if is_admin %}{{ members|length + 1 }}{% else %}{{ members|length }}{% endif %} in room
         </span>
     </div>
 
@@ -334,6 +336,7 @@ socket.on('classroom_new_message', (data) => {
 });
 
 socket.on('classroom_user_joined', (data) => {
+    if (data.user_id === MY_USER_ID) return;
     appendSystemMsg(`${data.username} joined the room`);
     addMemberDot(data.user_id, data.username);
 });

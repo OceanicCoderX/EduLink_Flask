@@ -140,28 +140,29 @@ def update_task_status():
         if task_data and task_data[4] and task_data[4] != 'once':
             title, desc, d_date, d_time, rec, prio = task_data
             
-            # Calculate next date
-            next_date = d_date
+            # Calculate next date (must be after today)
+            today = date.today()
+            base_date = d_date if d_date >= today else today
+            
             if rec == 'daily':
-                next_date = d_date + timedelta(days=1)
+                next_date = base_date + timedelta(days=1)
             elif rec == 'weekly':
-                next_date = d_date + timedelta(weeks=1)
+                next_date = base_date + timedelta(weeks=1)
             elif rec == 'monthly':
-                # Simple monthly: approximate or same day next month
                 try:
-                    month = d_date.month % 12 + 1
-                    year = d_date.year + (d_date.month // 12)
-                    next_date = d_date.replace(year=year, month=month)
+                    month = base_date.month % 12 + 1
+                    year = base_date.year + (base_date.month // 12)
+                    next_date = base_date.replace(year=year, month=month)
                 except ValueError:
-                    # Handle end of month issues (e.g. Jan 31 -> Feb 28)
-                    next_date = d_date + timedelta(days=31)
+                    next_date = base_date + timedelta(days=31)
                     next_date = next_date.replace(day=1) - timedelta(days=1)
             elif rec == 'yearly':
                 try:
-                    next_date = d_date.replace(year=d_date.year + 1)
+                    next_date = base_date.replace(year=base_date.year + 1)
                 except ValueError:
-                    # Leap year
-                    next_date = d_date.replace(year=d_date.year + 1, month=3, day=1)
+                    next_date = base_date.replace(year=base_date.year + 1, month=3, day=1)
+            else:
+                next_date = base_date # Fallback
 
             cursor.execute("""
                 INSERT INTO tasks

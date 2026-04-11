@@ -593,7 +593,7 @@
 
         .editor-textarea {
             width: 100%;
-            min-height: 650px; /* Increased by 150px as requested */
+            min-height: 1150px; /* Increased by 500px as requested */
             border: none;
             background: transparent;
             font-size: 16px;
