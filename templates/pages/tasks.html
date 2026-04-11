@@ -57,10 +57,6 @@
                 <span class="stat-value" id="todayTasksCount">0</span>
                 <span class="stat-label">Due Today</span>
             </div>
-            <div class="stat-card">
-                <span class="stat-value" id="streakCount">0</span>
-                <span class="stat-label">Streak</span>
-            </div>
         </div>
     </div>
 
@@ -76,7 +72,26 @@
                 <i class="fas fa-search"></i>
                 <input type="text" id="searchInput" placeholder="Search tasks...">
             </div>
-            <button class="filter-btn" id="filterBtn"><i class="fas fa-filter"></i><span>Filter</span></button>
+            <div style="position: relative;">
+                <button class="filter-btn" id="filterBtn"><i class="fas fa-filter"></i><span>Filter</span></button>
+                <div class="filter-dropdown" id="filterDropdown">
+                    <div class="dropdown-header">Sort By</div>
+                    <div class="dropdown-item active" data-sort="date" id="sortDate">
+                        <i class="fas fa-calendar-alt"></i> Date
+                    </div>
+                    <div class="dropdown-item" data-sort="priority" id="sortPriority">
+                        <i class="fas fa-exclamation-triangle"></i> Priority
+                    </div>
+                    <div class="dropdown-item" data-sort="title" id="sortTitle">
+                        <i class="fas fa-sort-alpha-down"></i> Title
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-header">Options</div>
+                    <div class="dropdown-item" id="toggleCompleted">
+                        <i class="fas fa-eye-slash"></i> Toggle Completed
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

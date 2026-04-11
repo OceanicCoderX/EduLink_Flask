@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let editingTaskId = null;
     let selectedPriority = 'medium';
     let activeFilter = 'all';
+    let currentSort = 'date';
+    let showCompleted = true;
 
     // ── DOM Elements ──────────────────────────────────────────
     const taskModal = document.getElementById('taskModal');
@@ -27,6 +29,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const filterChips = document.querySelectorAll('.filter-chip');
     const priorityOptions = document.querySelectorAll('.priority-option');
     const exportExcelBtn = document.getElementById('exportExcelBtn');
+    const filterBtn = document.getElementById('filterBtn');
+    const filterDropdown = document.getElementById('filterDropdown');
 
     // Optional elements (header se aate hain — null safe)
     const lightThemeBtn = document.getElementById('lightThemeBtn');
@@ -245,7 +249,19 @@ document.addEventListener('DOMContentLoaded', function () {
             );
         }
 
-        filtered.sort((a, b) => new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time));
+        // ── Advanced Sorting ──────────────────────────────────
+        if (currentSort === 'date') {
+            filtered.sort((a, b) => new Date(a.date + ' ' + (a.time || '00:00')) - new Date(b.date + ' ' + (b.time || '00:00')));
+        } else if (currentSort === 'priority') {
+            const pMap = { 'high': 3, 'medium': 2, 'low': 1, 'None': 1 };
+            filtered.sort((a, b) => pMap[b.priority || 'medium'] - pMap[a.priority || 'medium']);
+        } else if (currentSort === 'title') {
+            filtered.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+        }
+
+        if (!showCompleted) {
+            filtered = filtered.filter(t => t.status !== 'completed');
+        }
 
         if (tasksList) tasksList.innerHTML = '';
         else return;
@@ -736,5 +752,46 @@ document.addEventListener('DOMContentLoaded', function () {
         const cal = document.querySelector('.calendar-container');
         if (cal) cal.scrollIntoView({ behavior: 'smooth' });
     };
+
+    // ── Filter Dropdown Logic ────────────────────────────────
+    if (filterBtn && filterDropdown) {
+        filterBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            filterDropdown.classList.toggle('show');
+            filterBtn.classList.toggle('active');
+        });
+
+        document.addEventListener('click', () => {
+            filterDropdown.classList.remove('show');
+            filterBtn.classList.remove('active');
+        });
+
+        filterDropdown.addEventListener('click', (e) => e.stopPropagation());
+
+        const sortItems = filterDropdown.querySelectorAll('[data-sort]');
+        sortItems.forEach(item => {
+            item.addEventListener('click', () => {
+                sortItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                currentSort = item.dataset.sort;
+                renderTasks(activeFilter, searchInput ? searchInput.value : '');
+                filterDropdown.classList.remove('show');
+                filterBtn.classList.remove('active');
+            });
+        });
+
+        const toggleComp = document.getElementById('toggleCompleted');
+        if (toggleComp) {
+            toggleComp.addEventListener('click', () => {
+                showCompleted = !showCompleted;
+                toggleComp.innerHTML = showCompleted ?
+                    '<i class="fas fa-eye-slash"></i> Hide Completed' :
+                    '<i class="fas fa-eye"></i> Show Completed';
+                renderTasks(activeFilter, searchInput ? searchInput.value : '');
+                filterDropdown.classList.remove('show');
+                filterBtn.classList.remove('active');
+            });
+        }
+    }
 
 }); // END DOMContentLoaded
