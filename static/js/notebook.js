@@ -206,8 +206,7 @@ function renderNotesList() {
                             <div class="note-preview">${preview}</div>
                             <div class="note-meta">
                                 <span class="note-category">
-                                    <span>${categoryEmoji[note.category]}</span>
-                                    <span>${note.category}</span>
+                                    
                                 </span>
                                 <span>${date}</span>
                             </div>
@@ -555,12 +554,12 @@ function insertHtmlAtCursor(html) {
     range.deleteContents();
     const node = range.createContextualFragment(html);
     range.insertNode(node);
-    
+
     // Move cursor after the inserted content
     range.collapse(false);
     selection.removeAllRanges();
     selection.addRange(range);
-    
+
     // Update last range
     lastSelectionRange = range;
 }
@@ -589,7 +588,7 @@ document.getElementById('driveBtn').addEventListener('click', () => {
         showToast('Please select a note first', 'error');
         return;
     }
-    
+
     const fd = new FormData();
     fd.append('notes_title', document.getElementById('noteTitleInput').value);
     fd.append('notes_description', document.getElementById('noteContent').innerHTML);
@@ -623,7 +622,7 @@ function initResizing() {
             clearImageSelection();
         }
     });
-    
+
     // Also clear on scroll or window resize
     window.addEventListener('scroll', clearImageSelection, true);
     window.addEventListener('resize', clearImageSelection);
@@ -633,27 +632,27 @@ function selectImageForResizing(img) {
     clearImageSelection();
     currentResizingImg = img;
     img.classList.add('resizing-active');
-    
+
     const handle = document.createElement('div');
     handle.className = 'resize-handle';
     handle.style.cssText = `
         position: absolute; width: 12px; height: 12px; background: var(--primary);
         cursor: nwse-resize; z-index: 9999; border-radius: 2px;
     `;
-    
+
     document.body.appendChild(handle);
     updateHandlePosition(img, handle);
-    
+
     let isDragging = false;
-    
+
     handle.onmousedown = (e) => {
         isDragging = true;
         e.preventDefault();
         e.stopPropagation();
-        
+
         const startX = e.clientX;
         const startWidth = img.clientWidth;
-        
+
         function onMouseMove(moveEvent) {
             if (!isDragging) return;
             const delta = moveEvent.clientX - startX;
@@ -664,18 +663,18 @@ function selectImageForResizing(img) {
                 updateHandlePosition(img, handle);
             }
         }
-        
+
         function onMouseUp() {
             isDragging = false;
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
             markUnsaved();
         }
-        
+
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
     };
-    
+
     img._resizeHandle = handle;
 }
 
