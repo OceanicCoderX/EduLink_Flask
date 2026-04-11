@@ -102,7 +102,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 recurring: task.recurring || 'once',
                 priority: task.priority || 'medium',
                 status: task.status || 'pending',
-                createdAt: task.createdAt || ''
+                createdAt: task.createdAt || '',
+                completedDate: task.completedDate || ''
             }));
             renderTasks();
             updateStats();
@@ -458,10 +459,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // currentDate ko use karo — nav buttons se change hoti hai
         const viewDateStr = currentDate.toISOString().split('T')[0];
-
-        // Sirf pending tasks dikhao — completed wale filter out
-        // ✅ Recurring tasks bhi dikhao
-        const dayTasks = getTasksForDate(viewDateStr).filter(t => t.status !== 'completed');
+        const dayTasks = getTasksForDate(viewDateStr);
 
         if (dayTasks.length === 0) {
             timeline.innerHTML = `<div class="empty-state">
@@ -478,8 +476,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div onclick="window._toggleTask(${task.task_id})"
                      style="width:24px;height:24px;border-radius:6px;border:2px solid var(--primary,#5e72e4);
                             display:flex;align-items:center;justify-content:center;cursor:pointer;
-                            flex-shrink:0;margin-top:2px;transition:all 0.2s"
+                            flex-shrink:0;margin-top:2px;transition:all 0.2s;
+                            background:${task.status === 'completed' || task.completedDate === viewDateStr ? 'var(--primary,#5e72e4)' : 'transparent'}"
                      title="Mark complete">
+                    ${task.status === 'completed' || task.completedDate === viewDateStr ? '<i class="fas fa-check" style="color:white;font-size:12px"></i>' : ''}
                 </div>
 
                 <!-- Time + Content -->
@@ -493,7 +493,11 @@ document.addEventListener('DOMContentLoaded', function () {
                         </span>
                         ${task.recurring && task.recurring !== 'once' ? `<span style="font-size:11px;color:var(--accent-1,#2dceb1)"><i class="fas fa-redo"></i> ${task.recurring}</span>` : ''}
                     </div>
-                    <div style="font-weight:600;font-size:15px;color:var(--text-primary,#fff);margin-bottom:3px">${task.title}</div>
+                    <div style="font-weight:600;font-size:15px;color:var(--text-primary,#fff);margin-bottom:3px;
+                                text-decoration:${task.status === 'completed' || task.completedDate === viewDateStr ? 'line-through' : 'none'};
+                                opacity:${task.status === 'completed' || task.completedDate === viewDateStr ? '0.6' : '1'}">
+                        ${task.title}
+                    </div>
                     ${task.description ? `<div style="font-size:13px;color:var(--text-secondary,#aab);margin-top:2px">${task.description}</div>` : ''}
                 </div>
 
@@ -602,6 +606,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         return tasks.filter(task => {
             if (task.date === dateStr) return true;
+            if (task.completedDate === dateStr) return true;
 
             const taskDate = new Date(task.date + 'T12:00:00');
             // ❌ Task should NOT appear on dates before its initial Due Date

@@ -5,7 +5,7 @@
 
 from flask import Blueprint, render_template, request, session, redirect, url_for, jsonify
 from db import get_db_connection
-from datetime import date
+from datetime import date, timedelta, datetime
 from functools import wraps
 from helpers.stacks import award_stack, log_activity
 
@@ -40,7 +40,7 @@ def get_tasks():
     try:
         cursor.execute(
             """SELECT task_id, user_id, task_title, task_description,
-                      due_date, due_time, recurring, priority, status, created_date
+                      due_date, due_time, recurring, priority, status, created_date, completed_date
                FROM tasks WHERE user_id=%s
                ORDER BY due_date ASC, due_time ASC""",
             (user_id,)
@@ -59,7 +59,8 @@ def get_tasks():
             'recurring':   t[6] or 'once',
             'priority':    t[7] if t[7] and t[7] != 'None' else 'medium',
             'status':      t[8] or 'pending',
-            'createdAt':   str(t[9]) if t[9] else ''
+            'createdAt':   str(t[9]) if t[9] else '',
+            'completedDate': str(t[10]) if t[10] and str(t[10]) != '0000-00-00' else ''
         } for t in rows]
 
         return jsonify(task_list)
@@ -122,10 +123,52 @@ def update_task_status():
     task_title = row[0] if row else 'Task'
 
     if new_status == 'completed':
+        # Get task details for cloning if recurring
         cursor.execute(
-            "UPDATE tasks SET status='completed', completed_date=CURDATE() WHERE task_id=%s AND user_id=%s",
+            "SELECT task_title, task_description, due_date, due_time, recurring, priority FROM tasks WHERE task_id=%s AND user_id=%s",
             (task_id, user_id)
         )
+        task_data = cursor.fetchone()
+
+        # Update current task: Set to 'once' to preserve history, mark as completed
+        cursor.execute(
+            "UPDATE tasks SET status='completed', completed_date=CURDATE(), recurring='once' WHERE task_id=%s AND user_id=%s",
+            (task_id, user_id)
+        )
+
+        # If it was recurring, create a NEW pending task for the next occurrence
+        if task_data and task_data[4] and task_data[4] != 'once':
+            title, desc, d_date, d_time, rec, prio = task_data
+            
+            # Calculate next date
+            next_date = d_date
+            if rec == 'daily':
+                next_date = d_date + timedelta(days=1)
+            elif rec == 'weekly':
+                next_date = d_date + timedelta(weeks=1)
+            elif rec == 'monthly':
+                # Simple monthly: approximate or same day next month
+                try:
+                    month = d_date.month % 12 + 1
+                    year = d_date.year + (d_date.month // 12)
+                    next_date = d_date.replace(year=year, month=month)
+                except ValueError:
+                    # Handle end of month issues (e.g. Jan 31 -> Feb 28)
+                    next_date = d_date + timedelta(days=31)
+                    next_date = next_date.replace(day=1) - timedelta(days=1)
+            elif rec == 'yearly':
+                try:
+                    next_date = d_date.replace(year=d_date.year + 1)
+                except ValueError:
+                    # Leap year
+                    next_date = d_date.replace(year=d_date.year + 1, month=3, day=1)
+
+            cursor.execute("""
+                INSERT INTO tasks
+                (user_id, task_title, task_description, due_date, due_time, recurring, priority, status, created_date)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending', CURDATE())
+            """, (user_id, title, desc, next_date, d_time, rec, prio))
+
         mydb.commit()
         cursor.close()
         mydb.close()
