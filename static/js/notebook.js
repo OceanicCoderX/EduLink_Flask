@@ -91,6 +91,9 @@ window.addEventListener('load', () => {
     // fetch notes from server, fallback to local storage
     fetchNotesFromServer();
 
+    // Init resizing
+    initResizing();
+
     // save button handler
     const saveBtn = document.getElementById('saveNoteBtn');
     if (saveBtn) {
@@ -488,13 +491,37 @@ function uploadNoteMedia(input) {
         .then(res => res.json())
         .then(data => {
             if (data.success) {
+                const fullUrl = `${window.location.origin}/static/${data.file_path}`;
                 if (data.file_type === 'image') {
-                    const imgHtml = `<img src="/static/${data.file_path}" alt="${data.file_original}" style="max-width:100%; border-radius:8px; margin:10px 0;">`;
+                    const imgHtml = `
+                        <div class="note-media-item" style="margin: 10px 0; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--bg-primary); max-width: 100%;">
+                            <img src="${fullUrl}" alt="${data.file_original}" style="max-width:100%; display: block;">
+                            <div style="padding: 8px 12px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; font-size: 11px; background: var(--bg-secondary);">
+                                <i class="fas fa-link" style="color: var(--primary); font-size: 10px;"></i>
+                                <span style="color: var(--text-muted);">Direct Link:</span>
+                                <a href="${fullUrl}" target="_blank" style="color: var(--primary); text-decoration: none; word-break: break-all; font-family: monospace;">${fullUrl}</a>
+                            </div>
+                        </div><p></p>`;
                     insertHtmlAtCursor(imgHtml);
                 } else {
-                    const fileHtml = `<a href="/static/${data.file_path}" target="_blank" class="note-file-link" style="display:inline-flex; align-items:center; gap:8px; background:var(--bg-secondary); padding:8px 12px; border-radius:8px; text-decoration:none; color:var(--primary); font-weight:500; margin:5px 0;">
-                        <i class="fas fa-file-alt"></i> ${data.file_original}
-                    </a>`;
+                    const fileHtml = `
+                        <div class="note-media-item" style="margin: 10px 0; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-primary); overflow: hidden; max-width: 500px;">
+                            <div style="padding: 12px; display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 48px; height: 48px; border-radius: 10px; background: rgba(94, 114, 228, 0.1); display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink: 0;">
+                                    <i class="fas fa-file-alt fa-lg"></i>
+                                </div>
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-weight: 700; color: var(--text-primary); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${data.file_original}</div>
+                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${(data.file_size / 1024).toFixed(1)} KB</div>
+                                </div>
+                                <a href="${fullUrl}" target="_blank" style="padding: 8px 16px; background: var(--primary); color: white; border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap;">View / Download</a>
+                            </div>
+                            <div style="padding: 8px 12px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; font-size: 11px; background: var(--bg-secondary);">
+                                <i class="fas fa-link" style="color: var(--primary); font-size: 10px;"></i>
+                                <span style="color: var(--text-muted);">Direct Link:</span>
+                                <a href="${fullUrl}" target="_blank" style="color: var(--primary); text-decoration: none; word-break: break-all; font-family: monospace;">${fullUrl}</a>
+                            </div>
+                        </div><p></p>`;
                     insertHtmlAtCursor(fileHtml);
                 }
                 showToast('Media inserted!', 'success');
@@ -580,3 +607,91 @@ document.getElementById('driveBtn').addEventListener('click', () => {
             }
         });
 });
+
+// --- Image Resizing Logic ---
+let currentResizingImg = null;
+
+function initResizing() {
+    const editor = document.getElementById('noteContent');
+    if (!editor) return;
+
+    editor.addEventListener('click', (e) => {
+        if (e.target.tagName === 'IMG') {
+            e.stopPropagation();
+            selectImageForResizing(e.target);
+        } else if (!e.target.closest('.resize-handle')) {
+            clearImageSelection();
+        }
+    });
+    
+    // Also clear on scroll or window resize
+    window.addEventListener('scroll', clearImageSelection, true);
+    window.addEventListener('resize', clearImageSelection);
+}
+
+function selectImageForResizing(img) {
+    clearImageSelection();
+    currentResizingImg = img;
+    img.classList.add('resizing-active');
+    
+    const handle = document.createElement('div');
+    handle.className = 'resize-handle';
+    handle.style.cssText = `
+        position: absolute; width: 12px; height: 12px; background: var(--primary);
+        cursor: nwse-resize; z-index: 9999; border-radius: 2px;
+    `;
+    
+    document.body.appendChild(handle);
+    updateHandlePosition(img, handle);
+    
+    let isDragging = false;
+    
+    handle.onmousedown = (e) => {
+        isDragging = true;
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const startX = e.clientX;
+        const startWidth = img.clientWidth;
+        
+        function onMouseMove(moveEvent) {
+            if (!isDragging) return;
+            const delta = moveEvent.clientX - startX;
+            const newWidth = startWidth + delta;
+            if (newWidth > 30) {
+                img.style.width = newWidth + 'px';
+                img.style.height = 'auto'; // Maintain aspect ratio
+                updateHandlePosition(img, handle);
+            }
+        }
+        
+        function onMouseUp() {
+            isDragging = false;
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            markUnsaved();
+        }
+        
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    };
+    
+    img._resizeHandle = handle;
+}
+
+function updateHandlePosition(img, handle) {
+    const rect = img.getBoundingClientRect();
+    handle.style.left = (window.scrollX + rect.right - 6) + 'px';
+    handle.style.top = (window.scrollY + rect.bottom - 6) + 'px';
+}
+
+function clearImageSelection() {
+    if (currentResizingImg) {
+        currentResizingImg.classList.remove('resizing-active');
+        if (currentResizingImg._resizeHandle) {
+            currentResizingImg._resizeHandle.remove();
+            delete currentResizingImg._resizeHandle;
+        }
+        currentResizingImg = null;
+    }
+}

@@ -159,7 +159,8 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
+            height: 100vh;
+            overflow: hidden;
         }
 
         /* Top Header */
@@ -240,6 +241,7 @@
             display: flex;
             flex: 1;
             overflow: hidden;
+            height: calc(100vh - 100px); /* Bounding height */
         }
 
         /* Notes List Panel */
@@ -330,7 +332,8 @@
         .notes-list {
             flex: 1;
             overflow-y: auto;
-            padding: 0 20px 20px;
+            padding: 20px;
+            scrollbar-width: thin;
         }
 
         .note-item {
@@ -391,6 +394,7 @@
             background-color: var(--bg-primary);
             display: flex;
             flex-direction: column;
+            height: 100%;
             overflow: hidden;
         }
 
@@ -584,11 +588,12 @@
             flex: 1;
             padding: 40px;
             overflow-y: auto;
+            min-height: 0; /* Critical for flex scrolling */
         }
 
         .editor-textarea {
             width: 100%;
-            min-height: 500px;
+            min-height: 650px; /* Increased by 150px as requested */
             border: none;
             background: transparent;
             font-size: 16px;
@@ -610,6 +615,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0; /* Guarantee footer visibility */
         }
 
         .word-count {
@@ -741,3 +747,29 @@
                 overflow-x: auto;
             }
         }
+
+        .save-btn {
+            background: linear-gradient(135deg, var(--primary), var(--accent-1));
+            color: white;
+            box-shadow: 0 4px 12px rgba(94, 114, 228, 0.2);
+            padding: 8px 24px !important;
+            border-radius: 10px !important;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(94, 114, 228, 0.3);
+        }
+
+        .save-btn:disabled {
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.7;
+        }

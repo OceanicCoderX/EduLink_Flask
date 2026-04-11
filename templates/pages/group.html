@@ -455,6 +455,7 @@ async function sendMessage() {
     if (selectedFile) {
         const fd = new FormData();
         fd.append('file', selectedFile);
+        fd.append('group_id', GROUP_ID);
         
         try {
             const res = await fetch('/api/upload-group-file', { method: 'POST', body: fd });

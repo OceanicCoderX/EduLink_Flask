@@ -15,7 +15,7 @@ from helpers.stacks import log_activity
 notebook_bp = Blueprint('notebook', __name__)
 
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'pptx', 'xlsx', 'txt', 'png', 'jpg', 'jpeg'}
-UPLOAD_BASE = os.path.join('static', 'uploads')
+UPLOAD_BASE = os.path.join('static', 'uploads', 'notes')
 
 
 def login_required(f):
@@ -206,7 +206,7 @@ def save_to_drive():
     with open(file_path, 'w', encoding='utf-8') as f:
         f.write(html_content)
         
-    rel_path = f"uploads/{user_id}/drive/{filename}"
+    rel_path = f"uploads/notes/{user_id}/drive/{filename}"
     
     # Record in uploaded_files for management
     mydb   = get_db_connection()
@@ -258,7 +258,7 @@ def upload_file():
     f.save(save_path)
 
     file_size = os.path.getsize(save_path)
-    rel_path  = f"uploads/{user_id}/{unique_name}"
+    rel_path  = f"uploads/notes/{user_id}/{unique_name}"
 
     mydb   = get_db_connection()
     cursor = mydb.cursor()

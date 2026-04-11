@@ -411,6 +411,28 @@ def allowed_file(filename):
 @community_bp.route('/api/upload-group-file', methods=['POST'])
 @login_required
 def upload_group_file():
+    user_id = session['user_id']
+    group_id = request.form.get('group_id')
+    
+    if not group_id:
+        return jsonify({"success": False, "error": "Missing group_id"})
+
+    # Fetch group_name to create folder
+    mydb = get_db_connection()
+    cursor = mydb.cursor()
+    cursor.execute("SELECT group_name FROM community WHERE group_id=%s", (group_id,))
+    res = cursor.fetchone()
+    if not res:
+        cursor.close(); mydb.close()
+        return jsonify({"success": False, "error": "Group not found"})
+    
+    group_name = res[0]
+    cursor.close(); mydb.close()
+
+    # Sanitize group_name for folder
+    safe_group_name = "".join([c for c in group_name if c.isalnum() or c in (' ', '-', '_')]).strip().replace(' ', '_')
+    if not safe_group_name: safe_group_name = f"group_{group_id}"
+
     if 'file' not in request.files:
         return jsonify({"success": False, "error": "No file part"})
     file = request.files['file']
@@ -418,16 +440,16 @@ def upload_group_file():
         return jsonify({"success": False, "error": "No selected file"})
         
     if file and allowed_file(file.filename):
-        # Use a timestamp to prevent overwrites
-        import time
-        filename = f"{int(time.time())}_{secure_filename(file.filename)}"
+        original_filename = secure_filename(file.filename)
+        # Requirement: <userID_+_File_name>
+        unique_filename = f"{user_id}_{original_filename}"
         
-        upload_folder = os.path.join('static', 'uploads', 'groups')
+        upload_folder = os.path.join('static', 'uploads', 'groups', safe_group_name)
         if not os.path.exists(upload_folder):
             os.makedirs(upload_folder)
             
-        file.save(os.path.join(upload_folder, filename))
-        file_url = f"/static/uploads/groups/{filename}"
+        file.save(os.path.join(upload_folder, unique_filename))
+        file_url = f"/static/uploads/groups/{safe_group_name}/{unique_filename}"
         
         return jsonify({
             "success": True, 
