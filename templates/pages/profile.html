@@ -258,16 +258,7 @@
           <div class="toggle-switch {% if profile.whatsapp_notif %}active{% endif %}"
                id="whatsappNotifToggle" onclick="toggleSettingSwitch(this, 'whatsapp_notif')"></div>
         </div>
-        <div class="setting-item">
-          <span class="setting-label">Notification Channel</span>
-          <select class="form-input" style="width:auto;" id="notifChannelSelect"
-                  onchange="saveSettingsDirect()">
-            <option value="email"    {% if profile.notif_channel == 'email'    %}selected{% endif %}>Email Only</option>
-            <option value="whatsapp" {% if profile.notif_channel == 'whatsapp' %}selected{% endif %}>WhatsApp Only</option>
-            <option value="both"     {% if profile.notif_channel == 'both'     %}selected{% endif %}>Both</option>
-            <option value="none"     {% if profile.notif_channel == 'none'     %}selected{% endif %}>None</option>
-          </select>
-        </div>
+        
       </div>
 
       <!-- Privacy -->
