@@ -13,16 +13,21 @@ from config import (
 
 # ── Email (Flask-Mail) ───────────────────────────────────────
 
-def send_email(app, to_email: str, subject: str, body: str) -> bool:
+def send_email(to_email: str, subject: str, body: str, app=None) -> bool:
     """
     Send an email via Flask-Mail.
     Usage:
         from helpers.notifications import send_email
-        send_email(app, 'user@email.com', 'Task Due', 'Your task is due tomorrow!')
+        send_email('user@email.com', 'Task Due', 'Your task is due tomorrow!')
     """
     try:
         from flask_mail import Mail, Message
-        mail = Mail(app)
+        from flask import current_app
+        
+        # Use current_app if no app instance is passed
+        target_app = app or current_app
+        mail = Mail(target_app)
+        
         msg  = Message(subject=subject, recipients=[to_email], body=body,
                        sender=MAIL_DEFAULT_SENDER)
         mail.send(msg)
@@ -57,7 +62,7 @@ def send_whatsapp(to_number: str, message: str) -> bool:
 
 # ── Smart Notification (respects user preference) ────────────
 
-def notify_user(app, user_row: dict, subject: str, body: str) -> None:
+def notify_user(user_row: dict, subject: str, body: str, app=None) -> None:
     """
     Notify user based on their preferred channel.
     user_row needs: { email, whatsapp, notif_channel }
@@ -65,7 +70,7 @@ def notify_user(app, user_row: dict, subject: str, body: str) -> None:
     channel = user_row.get('notif_channel', 'email')
 
     if channel == 'email':
-        send_email(app, user_row['email'], subject, body)
+        send_email(user_row['email'], subject, body, app=app)
 
     elif channel == 'whatsapp':
         number = user_row.get('whatsapp', '')
@@ -76,7 +81,7 @@ def notify_user(app, user_row: dict, subject: str, body: str) -> None:
             send_whatsapp(number, f"{subject}\n\n{body}")
 
     elif channel == 'both':
-        send_email(app, user_row['email'], subject, body)
+        send_email(user_row['email'], subject, body, app=app)
         number = user_row.get('whatsapp', '')
         if number:
             if not number.startswith('+'):

@@ -7,6 +7,7 @@ from flask import session, request
 from flask_socketio import emit, join_room, leave_room
 from db import get_db_connection
 from datetime import datetime
+from helpers.notifications import send_email, notify_user
 
 def init_socket_events(socketio):
 
@@ -234,6 +235,28 @@ def init_socket_events(socketio):
             'file_type':  file_type,
             'time':       datetime.now().strftime("%I:%M %p")
         }, to=room_key)
+
+        # Notify offline members (Simple version: everyone in group except sender)
+        try:
+            mydb2   = get_db_connection()
+            cursor2 = mydb2.cursor(dictionary=True)
+            cursor2.execute("""
+                SELECT u.email, u.profilename, u.notif_channel
+                FROM group_members gm
+                JOIN users u ON u.user_id = gm.member_id
+                WHERE gm.group_id = %s AND u.user_id != %s
+            """, (group_id, user_id))
+            members = cursor2.fetchall()
+            
+            notif_body = f"New message in {subject} group from {username}:\n\n\"{message[:100]}\""
+            for member in members:
+                # We use notify_user which respects user's channel preference
+                notify_user(member, f"Group Alert: {subject}", notif_body)
+            
+            cursor2.close()
+            mydb2.close()
+        except Exception as e:
+            print(f"[Socket Notif] Error notifying members: {e}")
 
 
     # ==============================================================

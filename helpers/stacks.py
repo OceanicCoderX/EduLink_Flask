@@ -140,6 +140,26 @@ def handle_daily_login(user_id: int) -> dict:
             result          = award_stack(user_id, 'daily_login', 1)
             result['streak']  = new_streak
             result['awarded'] = True
+
+            # Step: Send Daily Task Reminder
+            try:
+                # Fetch pending tasks count
+                cursor_tasks = mydb.cursor(dictionary=True)
+                cursor_tasks.execute("SELECT COUNT(*) as task_count FROM tasks WHERE user_id=%s AND status='pending'", (user_id,))
+                t_row = cursor_tasks.fetchone()
+                pending_count = t_row['task_count'] if t_row else 0
+
+                if pending_count > 0:
+                    cursor_tasks.execute("SELECT email, profilename, notif_channel FROM users WHERE user_id=%s", (user_id,))
+                    u_row = cursor_tasks.fetchone()
+                    if u_row:
+                        from helpers.notifications import notify_user
+                        notif_body = f"Hi {u_row['profilename']},\n\nGood morning! ☀️\nYou have {pending_count} pending tasks for today. Don't forget to complete them to keep your streak alive!\n\nStay focused,\nTeam EduLink"
+                        notify_user(u_row, "Daily Task Reminder", notif_body)
+                cursor_tasks.close()
+            except Exception as te:
+                print(f"[Daily Notif] Error: {te}")
+
             return result
 
         cursor.close()

@@ -8,6 +8,9 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from werkzeug.security import generate_password_hash, check_password_hash
 from db import get_db_connection
 from helpers.stacks import handle_daily_login, log_activity
+from helpers.notifications import send_email, notify_user
+import random
+from datetime import datetime, timedelta
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -172,6 +175,10 @@ def signup():
     cursor.close()
     mydb.close()
 
+    # Step: Send Welcome Notification
+    welcome_body = f"Hi {profilename},\n\nWelcome to EduLink! 🚀\nWe're excited to have you join our community of learners. Start by creating notes, joining classrooms, and building your study stacks.\n\nHappy Learning!\nTeam EduLink"
+    send_email(email, "Welcome to EduLink!", welcome_body)
+
     return redirect(url_for('auth.login'))
 
 
@@ -197,9 +204,45 @@ def forgot_password():
     mydb.close()
 
     if result:
-        return render_template('update_password.html', email=email)
+        # Generate 6-digit OTP
+        otp = str(random.randint(100000, 999999))
+        expiry = datetime.now() + timedelta(minutes=10)
+
+        mydb2 = get_db_connection()
+        cursor2 = mydb2.cursor()
+        cursor2.execute("DELETE FROM otp_codes WHERE email=%s", (email,))
+        cursor2.execute("INSERT INTO otp_codes (email, otp_code, expires_at) VALUES (%s, %s, %s)", (email, otp, expiry))
+        mydb2.commit()
+        cursor2.close()
+        mydb2.close()
+
+        # Send OTP via Email
+        subject = "EduLink - Password Reset OTP"
+        body = f"Your OTP for password reset is: {otp}\n\nThis code will expire in 10 minutes.\nIf you didn't request this, please ignore this email."
+        send_email(email, subject, body)
+
+        return render_template('verify_otp.html', email=email)
     else:
         return render_template('forgot_password.html', error="Email not found!")
+
+
+@auth_bp.route('/verify-otp', methods=['POST'])
+def verify_otp():
+    """Verify the 6-digit OTP code."""
+    email = request.form.get('email')
+    otp   = request.form.get('otp')
+
+    mydb   = get_db_connection()
+    cursor = mydb.cursor()
+    cursor.execute("SELECT id FROM otp_codes WHERE email=%s AND otp_code=%s AND expires_at > NOW()", (email, otp))
+    result = cursor.fetchone()
+    cursor.close()
+    mydb.close()
+
+    if result:
+        return render_template('update_password.html', email=email)
+    else:
+        return render_template('verify_otp.html', email=email, error="Invalid or expired OTP!")
 
 
 @auth_bp.route('/update-password', methods=['POST'])

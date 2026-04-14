@@ -24,9 +24,9 @@ MAX_CONTENT_LENGTH = 16 * 1024 * 1024   # 16 MB max upload size
 MAIL_SERVER         = "smtp.gmail.com"
 MAIL_PORT           = 587
 MAIL_USE_TLS        = True
-MAIL_USERNAME       = ""   # your Gmail: example@gmail.com
-MAIL_PASSWORD       = ""   # Gmail App Password (16-char)
-MAIL_DEFAULT_SENDER = "EduLink <noreply@edulink.com>"
+MAIL_USERNAME       = "oceanprincess003@gmail.com"
+MAIL_PASSWORD       = "aoyu qine cwfd aegq"
+MAIL_DEFAULT_SENDER = "EduLink <oceanprincess003@gmail.com>"
 
 # --- Twilio Config (WhatsApp) ---
 # To enable: sign up at twilio.com, get Sandbox credentials
