@@ -777,3 +777,69 @@
     transform: none;
     opacity: 0.7;
 }
+
+/* ─── Category Filter Bar ──────────────────────────────────── */
+.cat-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    flex-shrink: 0;
+}
+.cat-filter-bar::-webkit-scrollbar { display: none; }
+
+.cat-filter-btn {
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    font-family: var(--font-body);
+}
+.cat-filter-btn:hover {
+    border-color: var(--cat-color, var(--primary));
+    color: var(--cat-color, var(--primary));
+}
+.cat-filter-btn.active {
+    background: var(--cat-color, var(--primary));
+    border-color: var(--cat-color, var(--primary));
+    color: #fff;
+}
+.cat-manage-btn {
+    border-style: dashed;
+    opacity: 0.7;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.cat-manage-btn:hover { opacity: 1; }
+
+/* ─── Editor Category Row ──────────────────────────────────── */
+.editor-category-row {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+}
+.cat-select-dropdown {
+    padding: 6px 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: var(--font-body);
+    min-width: 140px;
+}
+.cat-select-dropdown:focus { border-color: var(--primary); }

@@ -2,6 +2,7 @@
 let notes = [];
 let currentNoteId = null;
 let currentCategory = 'all';
+let categories = []; // {cat_id, name, color}
 
 // helper functions for storage/back-end sync
 function loadNotesFromLocal() {
@@ -90,6 +91,7 @@ window.addEventListener('load', () => {
 
     // fetch notes from server, fallback to local storage
     fetchNotesFromServer();
+    fetchCategories();
 
     // Init resizing
     initResizing();
@@ -137,6 +139,157 @@ document.documentElement.setAttribute('data-theme', savedTheme);
 if (savedTheme === 'dark') {
     darkThemeBtn.classList.add('active');
     lightThemeBtn.classList.remove('active');
+}
+
+// ── Category Functions ────────────────────────────────────────
+
+function fetchCategories() {
+    fetch('/api/note-categories')
+        .then(r => r.json())
+        .then(data => {
+            categories = data;
+            renderCategoryFilters();
+            populateCategoryDropdown();
+        })
+        .catch(err => console.error('fetchCategories error', err));
+}
+
+function renderCategoryFilters() {
+    const bar = document.getElementById('catFilterBar');
+    if (!bar) return;
+    // Remove old dynamic buttons (keep first "All" and last "Manage" button)
+    const allBtn  = bar.querySelector('[data-cat="all"]');
+    const mngBtn  = bar.querySelector('.cat-manage-btn');
+    bar.innerHTML = '';
+    bar.appendChild(allBtn);
+
+    categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'cat-filter-btn';
+        btn.dataset.cat = cat.name;
+        btn.style.setProperty('--cat-color', cat.color);
+        btn.textContent = cat.name;
+        if (currentCategory === cat.name) btn.classList.add('active');
+        btn.onclick = () => filterByCategory(cat.name, btn);
+        bar.appendChild(btn);
+    });
+
+    bar.appendChild(mngBtn);
+
+    // Ensure "All" active state
+    if (currentCategory === 'all') allBtn.classList.add('active');
+    else allBtn.classList.remove('active');
+}
+
+function filterByCategory(catName, btn) {
+    currentCategory = catName;
+    // Update active button styles
+    document.querySelectorAll('.cat-filter-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderNotesList();
+}
+
+function populateCategoryDropdown(selectedValue) {
+    const sel = document.getElementById('noteCategorySelect');
+    if (!sel) return;
+    sel.innerHTML = '';
+    categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.name;
+        opt.textContent = cat.name;
+        sel.appendChild(opt);
+    });
+    if (selectedValue) sel.value = selectedValue;
+}
+
+// ── Category Modal ─────────────────────────────────────────────
+
+function openManageCategoriesModal() {
+    document.getElementById('manageCatModal').style.display = 'block';
+    renderCatManageList();
+}
+
+function closeManageCategoriesModal() {
+    document.getElementById('manageCatModal').style.display = 'none';
+    document.getElementById('newCatName').value = '';
+    document.getElementById('newCatError').style.display = 'none';
+}
+
+document.getElementById('manageCatModal').addEventListener('click', function(e) {
+    if (e.target === this) closeManageCategoriesModal();
+});
+
+function renderCatManageList() {
+    const list = document.getElementById('catManageList');
+    if (!list) return;
+    if (categories.length === 0) {
+        list.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;">No categories yet.</p>';
+        return;
+    }
+    list.innerHTML = categories.map(cat => `
+        <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg-secondary); border-radius:12px; border:1px solid var(--border-color);">
+            <span style="width:14px;height:14px;border-radius:50%;background:${cat.color};flex-shrink:0;"></span>
+            <span style="flex:1; font-weight:600; color:var(--text-primary); font-size:14px;">${cat.name}</span>
+            <button onclick="deleteCategoryById(${cat.cat_id}, '${cat.name.replace(/'/g, "\\'")}')"
+                style="width:30px;height:30px;background:rgba(245,54,92,0.1);color:#f5365c;border:none;border-radius:8px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>`).join('');
+}
+
+function addCategory() {
+    const nameInput  = document.getElementById('newCatName');
+    const colorInput = document.getElementById('newCatColor');
+    const errEl      = document.getElementById('newCatError');
+    const name  = nameInput.value.trim();
+    const color = colorInput.value || '#5e72e4';
+
+    errEl.style.display = 'none';
+    if (!name) { errEl.textContent = 'Please enter a name.'; errEl.style.display = 'block'; return; }
+
+    const fd = new FormData();
+    fd.append('name', name);
+    fd.append('color', color);
+
+    fetch('/api/note-categories', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                categories.push({ cat_id: data.cat_id, name: data.name, color: data.color });
+                nameInput.value = '';
+                renderCategoryFilters();
+                populateCategoryDropdown(document.getElementById('noteCategorySelect')?.value);
+                renderCatManageList();
+                showToast(`Category "${data.name}" added!`, 'success');
+            } else {
+                errEl.textContent = data.error || 'Failed to add.';
+                errEl.style.display = 'block';
+            }
+        })
+        .catch(() => { errEl.textContent = 'Network error.'; errEl.style.display = 'block'; });
+}
+
+function deleteCategoryById(catId, catName) {
+    if (!confirm(`Delete category "${catName}"? Notes in this category will move to General.`)) return;
+    const fd = new FormData();
+    fd.append('cat_id', catId);
+    fetch('/api/delete-note-category', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                categories = categories.filter(c => c.cat_id !== catId);
+                // Reset affected notes in local array
+                notes.forEach(n => { if (n.category === catName) n.category = 'General'; });
+                if (currentCategory === catName) currentCategory = 'all';
+                renderCategoryFilters();
+                populateCategoryDropdown(document.getElementById('noteCategorySelect')?.value);
+                renderCatManageList();
+                renderNotesList();
+                showToast(`Category "${catName}" deleted.`, 'success');
+            } else {
+                showToast(data.error || 'Delete failed.', 'error');
+            }
+        });
 }
 
 // Create New Note
@@ -236,7 +389,8 @@ function selectNote(noteId) {
     if (document.getElementById('noteContent')) {
         document.getElementById('noteContent').innerHTML = note.content;
     }
-    if (document.getElementById('categorySelect')) document.getElementById('categorySelect').value = note.category;
+    // Populate and set category dropdown
+    populateCategoryDropdown(note.category || 'General');
     if (document.getElementById('tagsInput')) document.getElementById('tagsInput').value = note.tags.join(', ');
 
     updateWordCount();
@@ -268,10 +422,10 @@ function manualSaveNote() {
     const note = notes.find(n => n.id === currentNoteId);
     if (!note) return;
 
-    note.title = document.getElementById('noteTitleInput') ? document.getElementById('noteTitleInput').value || 'Untitled Note' : 'Untitled Note';
-    note.content = document.getElementById('noteContent') ? document.getElementById('noteContent').innerHTML : '';
-    note.category = document.getElementById('categorySelect') ? document.getElementById('categorySelect').value : 'general';
-    note.tags = document.getElementById('tagsInput') ? document.getElementById('tagsInput').value.split(',').map(t => t.trim()).filter(t => t) : [];
+    note.title    = document.getElementById('noteTitleInput') ? document.getElementById('noteTitleInput').value || 'Untitled Note' : 'Untitled Note';
+    note.content  = document.getElementById('noteContent') ? document.getElementById('noteContent').innerHTML : '';
+    note.category = document.getElementById('noteCategorySelect') ? document.getElementById('noteCategorySelect').value : 'General';
+    note.tags     = document.getElementById('tagsInput') ? document.getElementById('tagsInput').value.split(',').map(t => t.trim()).filter(t => t) : [];
     note.updatedAt = new Date().toISOString();
 
     saveNotesToLocal();
@@ -513,12 +667,12 @@ function uploadNoteMedia(input) {
                                     <div style="font-weight: 700; color: var(--text-primary); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${data.file_original}</div>
                                     <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${(data.file_size / 1024).toFixed(1)} KB</div>
                                 </div>
-                                <a href="${fullUrl}" target="_blank" style="padding: 8px 16px; background: var(--primary); color: white; border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap;">View / Download</a>
+                                <button onclick="event.stopPropagation(); window.open('${fullUrl}', '_blank');" style="padding: 8px 16px; background: var(--primary); color: white; border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap; border: none; cursor: pointer;">View / Download</button>
                             </div>
                             <div style="padding: 8px 12px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; font-size: 11px; background: var(--bg-secondary);">
                                 <i class="fas fa-link" style="color: var(--primary); font-size: 10px;"></i>
                                 <span style="color: var(--text-muted);">Direct Link:</span>
-                                <a href="${fullUrl}" target="_blank" style="color: var(--primary); text-decoration: none; word-break: break-all; font-family: monospace;">${fullUrl}</a>
+                                <button onclick="event.stopPropagation(); window.open('${fullUrl}', '_blank');" style="color: var(--primary); background: none; border: none; cursor: pointer; text-decoration: underline; word-break: break-all; font-family: monospace; font-size: 11px; padding: 0; text-align: left;">${fullUrl}</button>
                             </div>
                         </div><p></p>`;
                     insertHtmlAtCursor(fileHtml);
@@ -615,6 +769,11 @@ function initResizing() {
     if (!editor) return;
 
     editor.addEventListener('click', (e) => {
+        // Allow buttons inside editor to work normally
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+            clearImageSelection();
+            return;
+        }
         if (e.target.tagName === 'IMG') {
             e.stopPropagation();
             selectImageForResizing(e.target);

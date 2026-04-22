@@ -15,6 +15,37 @@ from helpers.stacks import log_activity
 notebook_bp = Blueprint('notebook', __name__)
 
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'pptx', 'xlsx', 'txt', 'png', 'jpg', 'jpeg'}
+
+DEFAULT_CATEGORIES = [
+    ('General',   '#8898aa'),
+    ('Physics',   '#5e72e4'),
+    ('Chemistry', '#2dce89'),
+    ('Math',      '#fb6340'),
+    ('Biology',   '#11cdef'),
+    ('Coding',    '#f5365c'),
+]
+
+def ensure_categories_table():
+    """Auto-create note_categories table if it doesn't exist."""
+    try:
+        mydb   = get_db_connection()
+        cursor = mydb.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS note_categories (
+                cat_id     INT AUTO_INCREMENT PRIMARY KEY,
+                user_id    INT NOT NULL,
+                name       VARCHAR(60) NOT NULL,
+                color      VARCHAR(20) DEFAULT '#5e72e4',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_user_cat (user_id, name)
+            )
+        """)
+        mydb.commit()
+        cursor.close(); mydb.close()
+    except Exception as e:
+        print(f'[Notebook] ensure_categories_table error: {e}')
+
+ensure_categories_table()
 UPLOAD_BASE = os.path.join('static', 'uploads', 'notes')
 
 
@@ -55,6 +86,95 @@ def get_file_type(filename):
 @login_required
 def notebook():
     return render_template('pages/notebook.html', user=session)
+
+
+# ── Category APIs ─────────────────────────────────────────────
+
+@notebook_bp.route('/api/note-categories', methods=['GET'])
+@login_required
+def get_note_categories():
+    """Return user's categories; seed defaults if none exist."""
+    user_id = session['user_id']
+    mydb    = get_db_connection()
+    cursor  = mydb.cursor()
+
+    cursor.execute("SELECT cat_id, name, color FROM note_categories WHERE user_id=%s ORDER BY cat_id", (user_id,))
+    rows = cursor.fetchall()
+
+    if not rows:
+        # Seed default categories for this user
+        for name, color in DEFAULT_CATEGORIES:
+            try:
+                cursor.execute(
+                    "INSERT IGNORE INTO note_categories (user_id, name, color) VALUES (%s, %s, %s)",
+                    (user_id, name, color)
+                )
+            except Exception:
+                pass
+        mydb.commit()
+        cursor.execute("SELECT cat_id, name, color FROM note_categories WHERE user_id=%s ORDER BY cat_id", (user_id,))
+        rows = cursor.fetchall()
+
+    cursor.close(); mydb.close()
+    return jsonify([{'cat_id': r[0], 'name': r[1], 'color': r[2]} for r in rows])
+
+
+@notebook_bp.route('/api/note-categories', methods=['POST'])
+@login_required
+def create_note_category():
+    """Create a new custom category."""
+    user_id = session['user_id']
+    name    = (request.form.get('name') or '').strip()
+    color   = (request.form.get('color') or '#5e72e4').strip()
+
+    if not name:
+        return jsonify({'success': False, 'error': 'Name is required'})
+    if len(name) > 60:
+        return jsonify({'success': False, 'error': 'Name too long (max 60 chars)'})
+
+    mydb   = get_db_connection()
+    cursor = mydb.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO note_categories (user_id, name, color) VALUES (%s, %s, %s)",
+            (user_id, name, color)
+        )
+        mydb.commit()
+        cat_id = cursor.lastrowid
+        cursor.close(); mydb.close()
+        return jsonify({'success': True, 'cat_id': cat_id, 'name': name, 'color': color})
+    except Exception as e:
+        cursor.close(); mydb.close()
+        return jsonify({'success': False, 'error': 'Category already exists'})
+
+
+@notebook_bp.route('/api/delete-note-category', methods=['POST'])
+@login_required
+def delete_note_category():
+    """Delete a category and reset any notes using it to 'General'."""
+    user_id = session['user_id']
+    cat_id  = request.form.get('cat_id')
+
+    mydb   = get_db_connection()
+    cursor = mydb.cursor()
+
+    # Get category name first
+    cursor.execute("SELECT name FROM note_categories WHERE cat_id=%s AND user_id=%s", (cat_id, user_id))
+    row = cursor.fetchone()
+    if not row:
+        cursor.close(); mydb.close()
+        return jsonify({'success': False, 'error': 'Category not found'})
+
+    cat_name = row[0]
+    # Reset affected notes to 'General'
+    cursor.execute(
+        "UPDATE notes SET category='General' WHERE user_id=%s AND category=%s",
+        (user_id, cat_name)
+    )
+    cursor.execute("DELETE FROM note_categories WHERE cat_id=%s AND user_id=%s", (cat_id, user_id))
+    mydb.commit()
+    cursor.close(); mydb.close()
+    return jsonify({'success': True})
 
 
 # ── Notes API ────────────────────────────────────────────────

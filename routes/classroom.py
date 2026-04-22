@@ -113,6 +113,14 @@ def room(room_id):
         for r in cursor.fetchall()
     ]
 
+    # Calculate session join time offset for timer persistence
+    cursor.execute("SELECT join_time FROM room_members WHERE room_id=%s AND member_id=%s", (room_id, user_id))
+    join_time_row = cursor.fetchone()
+    join_seconds_ago = 0
+    if join_time_row and join_time_row[0]:
+        diff = datetime.now() - join_time_row[0]
+        join_seconds_ago = int(diff.total_seconds())
+
     cursor.close(); mydb.close()
 
     room_dict = {
@@ -129,7 +137,8 @@ def room(room_id):
     return render_template('pages/room.html',
                            user=session, room=room_dict,
                            members=members, messages=messages,
-                           is_admin=is_admin)
+                           is_admin=is_admin,
+                           join_seconds_ago=join_seconds_ago)
 
 
 # ── API: Create Room ──────────────────────────────────────────

@@ -93,23 +93,68 @@
     align-items: center;
     gap: 6px;
     backdrop-filter: blur(4px);
+    z-index: 5;
 }
 
-/* ── Participants Strip (floating at bottom inside video section) ── */
-.participants-strip {
+/* ── Participants Drawer (Retractable Side Panel) ── */
+.participants-drawer {
     position: absolute;
-    bottom: 64px;   /* above controls */
-    right: 12px;
+    top: 0;
+    left: -180px; /* Hidden by default */
+    width: 170px;
+    height: 100%;
+    background: rgba(10, 13, 20, 0.9);
+    border-right: 1px solid var(--border-color);
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    max-height: calc(100% - 120px);
+    padding: 12px 10px;
+    gap: 12px;
     overflow-y: auto;
-    z-index: 10;
     scrollbar-width: none;
-    padding: 4px;
 }
-.participants-strip::-webkit-scrollbar { display: none; }
+.participants-drawer::-webkit-scrollbar { display: none; }
+.participants-drawer.open { left: 0; }
+
+.drawer-header {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Drawer Toggle Button (Arrow) */
+.drawer-toggle {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 48px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+    z-index: 101;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+}
+.participants-drawer.open + .drawer-toggle { left: 170px; }
+.drawer-toggle i { transition: transform 0.3s; }
+.participants-drawer.open + .drawer-toggle i { transform: rotate(180deg); }
+
+/* ── Participants Strip (DEPRECATED - moved to drawer) ── */
+.participants-strip { display: none; }
 
 /* ── Peer Tile (small box in strip) ── */
 .peer-tile {
@@ -130,6 +175,7 @@
 }
 .peer-tile:hover { border-color: var(--primary); }
 .peer-tile.speaking { border-color: #2dce89; box-shadow: 0 0 0 2px rgba(45,206,137,0.35); }
+.peer-tile.cam-active { border-color: var(--primary); }
 .peer-tile video {
     width: 100%;
     height: 100%;
@@ -361,10 +407,36 @@
                 </div>
             </div>
 
-            <!-- Participants Strip: floating tiles for remote peers -->
-            <div class="participants-strip" id="participantsStrip">
-                <!-- Peer tiles added dynamically -->
+            <!-- Participants Drawer: side panel for remote peers -->
+            <div class="participants-drawer" id="participantsDrawer">
+                <div class="drawer-header">
+                    <i class="fas fa-users"></i> Peers
+                </div>
+                <!-- Pre-render all members (except current user) -->
+                {% for m in members %}
+                {% if m.user_id != user.user_id %}
+                <div class="peer-tile" id="tile_user_{{ m.user_id }}" data-username="{{ m.name }}">
+                    <video autoplay playsinline style="display:none;"></video>
+                    <div class="peer-avatar-box">
+                        <div class="peer-avatar">{{ m.name[0]|upper }}</div>
+                        <div class="peer-avatar-name">{{ m.name }}</div>
+                    </div>
+                    <div class="peer-label">
+                        <span class="peer-name-label">{{ m.name }}</span>
+                        <i class="fas fa-microphone-slash peer-mic-icon muted" id="mic_user_{{ m.user_id }}" title="Mic Off"></i>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
             </div>
+
+            <!-- Drawer Toggle Arrow -->
+            <button class="drawer-toggle" id="drawerToggle" onclick="toggleParticipantsDrawer()">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+
+            <!-- Participants Strip (Hidden/Legacy) -->
+            <div class="participants-strip" id="participantsStrip" style="display:none;"></div>
 
             <!-- Controls Bar -->
             <div class="video-controls">
@@ -461,8 +533,9 @@ const MY_NAME    = "{{ user.profilename|replace('"', '') }}";
 const IS_ADMIN   = {{ 'true' if is_admin else 'false' }};
 
 // ── Session Timer ─────────────────────────────────────────────
-const sessionStart = Date.now();
-const timerEl      = document.getElementById('sessionTimer');
+const JOIN_SECONDS_AGO = {{ join_seconds_ago|default(0) }};
+const sessionStart     = Date.now() - (JOIN_SECONDS_AGO * 1000);
+const timerEl          = document.getElementById('sessionTimer');
 setInterval(() => {
     const s = Math.floor((Date.now() - sessionStart) / 1000);
     const h = Math.floor(s / 3600);
@@ -576,8 +649,16 @@ function removeMemberDot(userId) {
 
 function updateMemberCount(delta) {
     const el   = document.getElementById('memberCount');
-    const curr = parseInt(el.textContent) || 1;
-    el.textContent = (curr + delta) + ' in room';
+    let curr   = parseInt(el.textContent) || 1;
+    // Sync with dots count to be safe
+    const dots = document.querySelectorAll('.member-dot').length;
+    el.textContent = dots + ' in room';
+}
+
+// ── Drawer UI ────────────────────────────────────────────────
+function toggleParticipantsDrawer() {
+    const drawer = document.getElementById('participantsDrawer');
+    drawer.classList.toggle('open');
 }
 
 
@@ -675,10 +756,12 @@ const localVideo      = document.getElementById('localVideo');
 const mainCamOff      = document.getElementById('mainCamOff');
 const camBtn          = document.getElementById('camBtn');
 const micBtn          = document.getElementById('micBtn');
-const participStrip   = document.getElementById('participantsStrip');
+const participStrip   = document.getElementById('participantsDrawer');
 const peerCountBadge  = document.getElementById('peerCountBadge');
 const peerCountNum    = document.getElementById('peerCountNum');
 const localMicIcon    = document.getElementById('localMicIcon');
+
+let sidToUserId = {}; // sid -> userId (for quick lookup)
 
 const iceConfig = {
     iceServers: [
@@ -687,42 +770,83 @@ const iceConfig = {
     ]
 };
 
-// Update peer count badge
+// Update peer count badge (Shows total active people in the call)
 function updatePeerBadge() {
-    const n = Object.keys(peers).length;
-    peerCountNum.textContent = n;
-    peerCountBadge.classList.toggle('show', n > 0);
+    // Count unique connected users in peers registry
+    const activePeers = Object.keys(peers).length;
+    const totalInCall = activePeers + 1; // Peers + Me
+    peerCountNum.textContent = totalInCall;
+    peerCountBadge.classList.toggle('show', totalInCall > 0);
 }
 
-// Create or get a peer tile in the strip
-function getOrCreatePeerTile(sid, username) {
-    let tile = document.getElementById('ptile_' + sid);
-    if (tile) return tile;
+// Link an sid to a pre-rendered or new user tile
+function getOrCreatePeerTile(sid, username, userId) {
+    if (userId) sidToUserId[sid] = userId;
+    
+    // 1. Try to find pre-rendered tile for this user
+    let tile = userId ? document.getElementById('tile_user_' + userId) : null;
+    
+    // 2. Fallback: if user joined dynamically and has no tile yet
+    if (!tile) {
+        tile = document.getElementById('ptile_' + sid);
+        if (tile) return tile;
 
-    const initial = (username || '?')[0].toUpperCase();
-    tile = document.createElement('div');
-    tile.className = 'peer-tile';
-    tile.id = 'ptile_' + sid;
-    tile.innerHTML = `
-        <video autoplay playsinline></video>
-        <div class="peer-avatar-box">
-            <div class="peer-avatar">${initial}</div>
-            <div class="peer-avatar-name">${username}</div>
-        </div>
-        <div class="peer-label">
-            <span class="peer-name-label">${username}</span>
-            <i class="fas fa-microphone peer-mic-icon" title="Mic"></i>
-        </div>
-    `;
-    participStrip.appendChild(tile);
+        const initial = (username || '?')[0].toUpperCase();
+        tile = document.createElement('div');
+        tile.className = 'peer-tile';
+        tile.id = userId ? 'tile_user_' + userId : 'ptile_' + sid;
+        tile.innerHTML = `
+            <video autoplay playsinline style="display:none;"></video>
+            <div class="peer-avatar-box">
+                <div class="peer-avatar">${initial}</div>
+                <div class="peer-avatar-name">${username}</div>
+            </div>
+            <div class="peer-label">
+                <span class="peer-name-label">${username}</span>
+                <i class="fas fa-microphone-slash peer-mic-icon muted" id="mic_${userId ? 'user_' + userId : sid}" title="Mic Off"></i>
+            </div>
+        `;
+        participStrip.appendChild(tile);
+    } else {
+        // Tag it with SID for disconnect cleanup if needed
+        tile.setAttribute('data-sid', sid);
+    }
+
     updatePeerBadge();
     return tile;
 }
 
 function removePeerTile(sid) {
-    const tile = document.getElementById('ptile_' + sid);
-    if (tile) tile.remove();
+    const userId = sidToUserId[sid];
+    if (userId) {
+        const tile = document.getElementById('tile_user_' + userId);
+        if (tile) {
+            // Don't remove the tile (permanent grid), just hide video and show avatar
+            const vid = tile.querySelector('video');
+            if (vid) { vid.srcObject = null; vid.style.display = 'none'; }
+            const avatarBox = tile.querySelector('.peer-avatar-box');
+            if (avatarBox) avatarBox.style.display = 'flex';
+            tile.classList.remove('cam-active');
+            tile.removeAttribute('data-sid');
+        }
+        delete sidToUserId[sid];
+    } else {
+        // Dynamic tile (not in members list)
+        const tile = document.getElementById('ptile_' + sid);
+        if (tile) tile.remove();
+    }
     updatePeerBadge();
+}
+
+// ── Auto-Ready Signaling ──────────────────────────────────────
+// Join WebRTC room immediately so we can receive others' streams
+// even if our own mic/cam is off.
+socket.on('connect', () => {
+    socket.emit('webrtc_user_ready', { room_id: ROOM_ID });
+});
+// Fallback if already connected
+if (socket.connected) {
+    socket.emit('webrtc_user_ready', { room_id: ROOM_ID });
 }
 
 // ── Camera Toggle ──────────────────────────────────────────────
@@ -772,6 +896,8 @@ camBtn.addEventListener('click', async () => {
             Object.keys(peers).forEach(sid => {
                 localStream.getTracks().forEach(t => peers[sid].addTrack(t, localStream));
             });
+            
+            // Re-emit ready if needed, though signals should flow normally now
             socket.emit('webrtc_user_ready', { room_id: ROOM_ID });
         } catch (err) {
             showRoomToast('Camera access denied: ' + err.message, 'red');
@@ -839,23 +965,23 @@ function stopMedia() {
 }
 
 // ── WebRTC Signaling ──────────────────────────────────────────
-socket.on('webrtc_new_peer', async ({ sid, username }) => {
+socket.on('webrtc_new_peer', async ({ sid, username, user_id }) => {
     peerNames[sid] = username;
-    const pc = createPC(sid, username);
+    const pc = createPC(sid, username, user_id);
     peers[sid] = pc;
     // Ensure the tile exists even before media flows
-    getOrCreatePeerTile(sid, username);
+    getOrCreatePeerTile(sid, username, user_id);
     if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     socket.emit('webrtc_offer', { room_id: ROOM_ID, target_sid: sid, offer });
 });
 
-socket.on('webrtc_offer', async ({ from_sid, username, offer }) => {
+socket.on('webrtc_offer', async ({ from_sid, username, user_id, offer }) => {
     const name = username || peerNames[from_sid] || 'Peer';
     peerNames[from_sid] = name;
-    if (!peers[from_sid]) peers[from_sid] = createPC(from_sid, name);
-    getOrCreatePeerTile(from_sid, name);
+    if (!peers[from_sid]) peers[from_sid] = createPC(from_sid, name, user_id);
+    getOrCreatePeerTile(from_sid, name, user_id);
     const pc = peers[from_sid];
     if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
     await pc.setRemoteDescription(new RTCSessionDescription(offer));
@@ -873,7 +999,16 @@ socket.on('webrtc_ice_candidate', async ({ from_sid, candidate }) => {
         await peers[from_sid].addIceCandidate(new RTCIceCandidate(candidate));
 });
 
-function createPC(sid, username) {
+socket.on('webrtc_peer_left', ({ sid, username }) => {
+    console.log(`[WebRTC] Peer left: ${username} (${sid})`);
+    removePeerTile(sid);
+    if (peers[sid]) {
+        peers[sid].close();
+        delete peers[sid];
+    }
+});
+
+function createPC(sid, username, userId) {
     const pc = new RTCPeerConnection(iceConfig);
 
     pc.onicecandidate = e => {
@@ -883,13 +1018,19 @@ function createPC(sid, username) {
 
     pc.ontrack = e => {
         const name = peerNames[sid] || username || 'Peer';
-        const tile = getOrCreatePeerTile(sid, name);
+        const tile = getOrCreatePeerTile(sid, name, userId);
         const vid  = tile.querySelector('video');
         vid.srcObject = e.streams[0];
 
         // Show video, hide avatar when track starts playing
         vid.onloadedmetadata = () => {
-            const hasVideo = e.streams[0].getVideoTracks().some(t => t.enabled && t.readyState === 'live');
+            const vTracks = e.streams[0].getVideoTracks();
+            const hasVideo = vTracks.length > 0 && vTracks[0].enabled && vTracks[0].readyState === 'live';
+            if (hasVideo) {
+                vid.style.display = 'block';
+                const avatarBox = tile.querySelector('.peer-avatar-box');
+                if (avatarBox) avatarBox.style.display = 'none';
+            }
             tile.classList.toggle('cam-active', hasVideo);
         };
 

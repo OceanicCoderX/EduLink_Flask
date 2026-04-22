@@ -23,6 +23,12 @@ def init_socket_events(socketio):
     # ==============================================================
     # CLASSROOM — Room-based Text Chat
     # ==============================================================
+    
+    # Registry for WebRTC and Room tracking
+    # _webrtc_rooms: { "classroom_{room_id}": { sid: username, ... } }
+    # _sid_to_room:  { sid: { "room_id": ..., "user_id": ..., "username": ... } }
+    _webrtc_rooms = {}
+    _sid_to_room  = {}
 
     @socketio.on('join_classroom_room')
     def handle_join_classroom_room(data):
@@ -30,8 +36,16 @@ def init_socket_events(socketio):
         user_id    = session.get('user_id')
         username   = data.get('username') or session.get('profilename', 'User')
         profession = session.get('profession', 'Student')
+        sid        = request.sid
 
         join_room(f"classroom_{room_id}")
+
+        # Register SID mapping for disconnect cleanup
+        _sid_to_room[sid] = {
+            'room_id':  room_id,
+            'user_id':  user_id,
+            'username': username
+        }
 
         emit('classroom_user_joined', {
             'user_id':    user_id,
@@ -48,6 +62,9 @@ def init_socket_events(socketio):
         user_id  = session.get('user_id')
 
         leave_room(f"classroom_{room_id}")
+        
+        if request.sid in _sid_to_room:
+            del _sid_to_room[request.sid]
 
         emit('classroom_user_left', {
             'user_id':  user_id,
@@ -292,10 +309,6 @@ def init_socket_events(socketio):
     # They pass SDP offers/answers and ICE candidates between clients.
     # ==============================================================
 
-    # Track which sids are in which classroom room for WebRTC
-    # Format: { "classroom_{room_id}": { sid: username, ... } }
-    _webrtc_rooms = {}
-
     @socketio.on('webrtc_user_ready')
     def handle_webrtc_user_ready(data):
         """Called when a user turns on camera/mic and is ready to receive peer connections."""
@@ -308,11 +321,14 @@ def init_socket_events(socketio):
         if room_key not in _webrtc_rooms:
             _webrtc_rooms[room_key] = {}
 
+        user_id  = session.get('user_id')
+
         # Notify ALL other peers in the room that this user is ready
         # Each other peer will create an RTCPeerConnection and send an offer
         for peer_sid in list(_webrtc_rooms[room_key].keys()):
             emit('webrtc_new_peer', {
                 'sid':      sid,
+                'user_id':  user_id,
                 'username': username
             }, to=peer_sid)
 
@@ -326,8 +342,10 @@ def init_socket_events(socketio):
         """Relay SDP offer from one peer to target peer."""
         target_sid = data.get('target_sid')
         username   = session.get('profilename', 'User')
+        user_id    = session.get('user_id')
         emit('webrtc_offer', {
             'from_sid': request.sid,
+            'user_id':  user_id,
             'username': username,
             'offer':    data.get('offer')
         }, to=target_sid)
@@ -357,11 +375,32 @@ def init_socket_events(socketio):
 
     @socketio.on('disconnect')
     def handle_disconnect():
-        """Clean up WebRTC room registry when a user disconnects."""
+        """Clean up registries and notify rooms when a user disconnects (tab closed/refreshed)."""
         sid = request.sid
-        for room_key in list(_webrtc_rooms.keys()):
-            if sid in _webrtc_rooms[room_key]:
-                username = _webrtc_rooms[room_key].pop(sid, 'User')
-                print(f"[WebRTC] {username} ({sid}) disconnected from {room_key}")
-                if not _webrtc_rooms[room_key]:
-                    del _webrtc_rooms[room_key]
+        
+        if sid in _sid_to_room:
+            info    = _sid_to_room.pop(sid)
+            room_id = info['room_id']
+            user_id = info['user_id']
+            name    = info['username']
+            room_key = f"classroom_{room_id}"
+
+            # 1. Notify for WebRTC removal (removes video tiles)
+            if room_key in _webrtc_rooms and sid in _webrtc_rooms[room_key]:
+                _webrtc_rooms[room_key].pop(sid)
+                emit('webrtc_peer_left', {
+                    'sid':      sid,
+                    'username': name
+                }, to=room_key)
+
+            # 2. Notify for Chat/Dots removal
+            emit('classroom_user_left', {
+                'user_id':  user_id,
+                'username': name,
+                'message':  f"{name} disconnected"
+            }, to=room_key)
+
+            print(f"[Socket] {name} ({sid}) disconnected from room {room_id}")
+            
+            if room_key in _webrtc_rooms and not _webrtc_rooms[room_key]:
+                del _webrtc_rooms[room_key]
