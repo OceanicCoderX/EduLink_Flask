@@ -694,3 +694,181 @@ function clearImageSelection() {
         currentResizingImg = null;
     }
 }
+
+// ========================================================
+// ALL NOTES MODAL
+// ========================================================
+
+const categoryEmojis = {
+    'general': '📚',
+    'physics': '🔬',
+    'chemistry': '🧪',
+    'math': '📐',
+    'biology': '🧬',
+    'coding': '💻'
+};
+
+function showAllNotesModal() {
+    document.getElementById('exportDropdown').style.display = 'none';
+    const modal = document.getElementById('allNotesModal');
+    modal.style.display = 'block';
+    // Reset search
+    document.getElementById('modalSearchInput').value = '';
+    renderAllNotesGrid(notes);
+    document.getElementById('allNotesSubtitle').textContent =
+        `${notes.length} note${notes.length !== 1 ? 's' : ''} total`;
+}
+
+function closeAllNotesModal() {
+    document.getElementById('allNotesModal').style.display = 'none';
+}
+
+// Close modal when clicking the dark backdrop (not the card itself)
+document.getElementById('allNotesModal').addEventListener('click', function (e) {
+    if (e.target === this) closeAllNotesModal();
+});
+
+function filterModalNotes() {
+    const term = document.getElementById('modalSearchInput').value.toLowerCase().trim();
+    const filtered = term
+        ? notes.filter(n =>
+            (n.title || '').toLowerCase().includes(term) ||
+            (n.content || '').replace(/<[^>]*>/g, '').toLowerCase().includes(term)
+        )
+        : notes;
+    renderAllNotesGrid(filtered);
+    document.getElementById('allNotesSubtitle').textContent =
+        `${filtered.length} of ${notes.length} note${notes.length !== 1 ? 's' : ''}`;
+}
+
+function renderAllNotesGrid(noteList) {
+    const grid = document.getElementById('allNotesGrid');
+    if (noteList.length === 0) {
+        grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:48px 0; color:var(--text-muted); font-size:15px;">
+            <div style="font-size:48px; margin-bottom:12px;">🔍</div>
+            No notes found.
+        </div>`;
+        return;
+    }
+
+    grid.innerHTML = noteList.map(note => {
+        const emoji = categoryEmojis[note.category] || '📝';
+        const preview = (note.content || '').replace(/<[^>]*>/g, '').substring(0, 120) || 'No content';
+        const date = new Date(note.updatedAt || note.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        return `
+        <div class="all-note-card" onclick="closeAllNotesModal(); setTimeout(()=>selectNote('${note.id}'),100);"
+             style="background:var(--bg-secondary); border:2px solid var(--border-color); border-radius:14px;
+                    padding:18px; cursor:pointer; transition:all 0.25s; position:relative; overflow:hidden;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,var(--primary),var(--accent-1));
+                            display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0;">${emoji}</div>
+                <div style="font-weight:700; color:var(--text-primary); font-size:14px; line-height:1.3; flex:1; overflow:hidden;
+                            white-space:nowrap; text-overflow:ellipsis;" title="${note.title}">${note.title}</div>
+            </div>
+            <div style="font-size:12px; color:var(--text-muted); line-height:1.6; margin-bottom:12px;
+                        display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${preview}</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--text-muted);">
+                <span style="background:rgba(94,114,228,0.12); color:var(--primary); padding:3px 10px; border-radius:20px; font-weight:600; text-transform:capitalize;">${note.category}</span>
+                <span>${date}</span>
+            </div>
+        </div>`;
+    }).join('');
+
+    // Hover effect via delegation
+    grid.querySelectorAll('.all-note-card').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            card.style.borderColor = 'var(--primary)';
+            card.style.transform = 'translateY(-3px)';
+            card.style.boxShadow = '0 8px 24px rgba(94,114,228,0.18)';
+        });
+        card.addEventListener('mouseleave', () => {
+            card.style.borderColor = 'var(--border-color)';
+            card.style.transform = '';
+            card.style.boxShadow = '';
+        });
+    });
+}
+
+// ---- Export All Notes as Excel (CSV) ----
+function exportAllExcel() {
+    if (notes.length === 0) { alert('No notes to export.'); return; }
+
+    const header = ['#', 'Title', 'Category', 'Tags', 'Created', 'Last Updated', 'Content'];
+    const rows = notes.map((note, i) => [
+        i + 1,
+        `"${(note.title || '').replace(/"/g, '""')}"`,
+        `"${(note.category || '').replace(/"/g, '""')}"`,
+        `"${(note.tags || []).join(', ').replace(/"/g, '""')}"`,
+        `"${new Date(note.createdAt).toLocaleString()}"`,
+        `"${new Date(note.updatedAt).toLocaleString()}"`,
+        `"${(note.content || '').replace(/<[^>]*>/g, '').replace(/"/g, '""').replace(/\n/g, ' ')}"`
+    ]);
+
+    const csv = [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel UTF-8
+    downloadFile(blob, `EduLink_AllNotes_${new Date().toISOString().slice(0, 10)}.csv`);
+}
+
+// ---- Export All Notes as PDF (print-ready HTML) ----
+function exportAllPDF() {
+    if (notes.length === 0) { alert('No notes to export.'); return; }
+
+    const rows = notes.map((note, i) => `
+        <div class="note-block">
+            <div class="note-num">#${i + 1}</div>
+            <h2>${note.title || 'Untitled'}</h2>
+            <div class="meta">
+                📁 ${note.category} &nbsp;|&nbsp;
+                🏷️ ${note.tags && note.tags.length ? note.tags.join(', ') : '—'} &nbsp;|&nbsp;
+                📅 ${new Date(note.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </div>
+            <div class="content">${note.content || '<em style="color:#aaa">No content</em>'}</div>
+        </div>
+    `).join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>EduLink – All Notes</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background:#f0f4ff; color:#1e1e2e; padding:0; }
+    .cover { background:linear-gradient(135deg,#5e72e4,#825ee4); color:#fff; padding:48px 64px; page-break-after:always; }
+    .cover h1 { font-size:36px; font-weight:800; margin-bottom:8px; }
+    .cover p  { font-size:16px; opacity:0.9; margin-top:4px; }
+    .cover .badge { display:inline-block; margin-top:20px; padding:6px 18px; background:rgba(255,255,255,0.2); border-radius:20px; font-size:14px; font-weight:600; }
+    .note-block { background:#fff; border-radius:16px; padding:32px 40px; margin:32px 40px; border-left:5px solid #5e72e4; page-break-inside:avoid; box-shadow:0 2px 12px rgba(0,0,0,0.08); }
+    .note-num { font-size:11px; font-weight:700; color:#5e72e4; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+    h2 { font-size:22px; font-weight:700; color:#1e1e2e; margin-bottom:10px; }
+    .meta { font-size:12px; color:#7c7f9b; margin-bottom:18px; padding-bottom:14px; border-bottom:1px dashed #e0e0ef; }
+    .content { font-size:15px; line-height:1.8; color:#333; }
+    .content img { max-width:100%; border-radius:8px; margin:10px 0; }
+    .content table { width:100%; border-collapse:collapse; margin:10px 0; }
+    .content th,.content td { border:1px solid #ddd; padding:8px; font-size:13px; }
+    .content pre { background:#f5f5f5; padding:12px; border-radius:8px; font-size:13px; overflow:auto; }
+    @media print {
+        body { background:#fff; }
+        .note-block { box-shadow:none; margin:24px 0; }
+        .cover { padding:48px 40px; }
+    }
+</style>
+</head>
+<body>
+<div class="cover">
+    <h1>📚 EduLink Notebook</h1>
+    <p>All Notes Export</p>
+    <div class="badge">📄 ${notes.length} Notes &nbsp;|&nbsp; Generated ${new Date().toLocaleString('en-IN')}</div>
+</div>
+${rows}
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => {
+        win.print();
+    }, 600);
+}

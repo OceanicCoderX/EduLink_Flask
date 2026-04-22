@@ -284,3 +284,84 @@ def init_socket_events(socketio):
 
         except Exception as e:
             print(f"[Socket] Follow update error: {e}")
+
+
+    # ==============================================================
+    # CLASSROOM — WebRTC Signaling Relay
+    # These handlers act as a relay server for WebRTC peer connections.
+    # They pass SDP offers/answers and ICE candidates between clients.
+    # ==============================================================
+
+    # Track which sids are in which classroom room for WebRTC
+    # Format: { "classroom_{room_id}": { sid: username, ... } }
+    _webrtc_rooms = {}
+
+    @socketio.on('webrtc_user_ready')
+    def handle_webrtc_user_ready(data):
+        """Called when a user turns on camera/mic and is ready to receive peer connections."""
+        room_id  = str(data.get('room_id'))
+        room_key = f"classroom_{room_id}"
+        username = session.get('profilename', 'User')
+        sid      = request.sid
+
+        # Register this SID in the WebRTC room
+        if room_key not in _webrtc_rooms:
+            _webrtc_rooms[room_key] = {}
+
+        # Notify ALL other peers in the room that this user is ready
+        # Each other peer will create an RTCPeerConnection and send an offer
+        for peer_sid in list(_webrtc_rooms[room_key].keys()):
+            emit('webrtc_new_peer', {
+                'sid':      sid,
+                'username': username
+            }, to=peer_sid)
+
+        # Now register self
+        _webrtc_rooms[room_key][sid] = username
+        print(f"[WebRTC] {username} ({sid}) ready in room {room_id}. Peers: {list(_webrtc_rooms[room_key].keys())}")
+
+
+    @socketio.on('webrtc_offer')
+    def handle_webrtc_offer(data):
+        """Relay SDP offer from one peer to target peer."""
+        target_sid = data.get('target_sid')
+        username   = session.get('profilename', 'User')
+        emit('webrtc_offer', {
+            'from_sid': request.sid,
+            'username': username,
+            'offer':    data.get('offer')
+        }, to=target_sid)
+        print(f"[WebRTC] Offer relayed from {request.sid} → {target_sid}")
+
+
+    @socketio.on('webrtc_answer')
+    def handle_webrtc_answer(data):
+        """Relay SDP answer back to the peer who sent the offer."""
+        target_sid = data.get('target_sid')
+        emit('webrtc_answer', {
+            'from_sid': request.sid,
+            'answer':   data.get('answer')
+        }, to=target_sid)
+        print(f"[WebRTC] Answer relayed from {request.sid} → {target_sid}")
+
+
+    @socketio.on('webrtc_ice_candidate')
+    def handle_webrtc_ice_candidate(data):
+        """Relay ICE candidate to specific peer."""
+        target_sid = data.get('target_sid')
+        emit('webrtc_ice_candidate', {
+            'from_sid':  request.sid,
+            'candidate': data.get('candidate')
+        }, to=target_sid)
+
+
+    @socketio.on('disconnect')
+    def handle_disconnect():
+        """Clean up WebRTC room registry when a user disconnects."""
+        sid = request.sid
+        for room_key in list(_webrtc_rooms.keys()):
+            if sid in _webrtc_rooms[room_key]:
+                username = _webrtc_rooms[room_key].pop(sid, 'User')
+                print(f"[WebRTC] {username} ({sid}) disconnected from {room_key}")
+                if not _webrtc_rooms[room_key]:
+                    del _webrtc_rooms[room_key]
