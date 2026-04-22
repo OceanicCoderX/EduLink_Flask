@@ -26,7 +26,7 @@
         const customTaskInput = document.getElementById('customTaskInput');
         const customTimeModal = document.getElementById('customTimeModal');
         const breakModal = document.getElementById('breakModal');
-        const breakSound = document.getElementById('breakSound');
+        // Sound via Web Audio API (no audio element needed)
 
         // Initialize
         updateDisplay();
@@ -243,7 +243,7 @@
 
         function completeSession() {
             stopTimer();
-            breakSound.play().catch(e => console.log('Audio play failed'));
+            playBreakSound();
 
             if (!isBreak) {
                 sessionsCompleted++;
@@ -331,6 +331,44 @@
         });
 
         
+
+        // ── Web Audio API: Loud Notification Sound ──────────────
+        function playBreakSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+                // 3-tone ding: high → mid → low (pleasant alarm)
+                const tones = [
+                    { freq: 880,  start: 0,    dur: 0.35 },
+                    { freq: 659,  start: 0.38, dur: 0.35 },
+                    { freq: 523,  start: 0.76, dur: 0.55 },
+                ];
+
+                tones.forEach(({ freq, start, dur }) => {
+                    const osc  = ctx.createOscillator();
+                    const gain = ctx.createGain();
+
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+
+                    // Loud attack, smooth decay
+                    gain.gain.setValueAtTime(0, ctx.currentTime + start);
+                    gain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + start + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+
+                    osc.start(ctx.currentTime + start);
+                    osc.stop(ctx.currentTime + start + dur);
+                });
+
+                // Close context after all tones finish
+                setTimeout(() => ctx.close(), 2000);
+            } catch (e) {
+                console.warn('Web Audio API not supported:', e);
+            }
+        }
 
         // Prevent page close during timer
         window.addEventListener('beforeunload', (e) => {
