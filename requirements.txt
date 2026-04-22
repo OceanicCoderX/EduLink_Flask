@@ -1,7 +1,7 @@
 Flask==3.0.3
 flask-socketio==5.3.6
 mysql-connector-python==8.3.0
-eventlet==0.33.3
+eventlet==0.35.2
 Werkzeug==3.0.3
 Flask-Mail==0.10.0
 twilio==9.3.4

@@ -28,7 +28,7 @@ app.config['MAIL_PASSWORD']       = MAIL_PASSWORD
 app.config['MAIL_DEFAULT_SENDER'] = MAIL_DEFAULT_SENDER
 
 # --- SocketIO Initialize (real-time chat ke liye) ---
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # --- Ensure upload directory exists ---
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
