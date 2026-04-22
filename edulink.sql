@@ -1,9 +1,6 @@
 -- ============================================================
 -- EduLink — Complete Database Schema
--- Version 2.1 (Added: classroom password/status/hours, room_members join_time)
--- Generated: 2026-04-09
--- Server: MariaDB 10.4.32 | PHP 8.1.25
--- Import: phpMyAdmin → edulink database → SQL tab → Go
+-- Version 2.2 (Consolidated PK & Auto-Increment)
 -- ============================================================
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -11,17 +8,12 @@ START TRANSACTION;
 SET time_zone = "+00:00";
 SET NAMES utf8mb4;
 
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
-
 -- ============================================================
 -- TABLE: classroom
 -- ============================================================
 
 CREATE TABLE `classroom` (
-  `room_id`          int(11)      NOT NULL,
+  `room_id`          int(11)      NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `room_name`        varchar(30)  NOT NULL,
   `room_description` text         NOT NULL,
   `admin_id`         int(11)      NOT NULL,
@@ -42,7 +34,7 @@ INSERT INTO `classroom` (`room_id`, `room_name`, `room_description`, `admin_id`,
 -- ============================================================
 
 CREATE TABLE `classroom_messages` (
-  `msg_id`   int(11)  NOT NULL,
+  `msg_id`   int(11)  NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `room_id`  int(11)  NOT NULL,
   `user_id`  int(11)  NOT NULL,
   `message`  text     NOT NULL,
@@ -54,7 +46,7 @@ CREATE TABLE `classroom_messages` (
 -- ============================================================
 
 CREATE TABLE `community` (
-  `group_id`          int(11)      NOT NULL,
+  `group_id`          int(11)      NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `group_name`        varchar(30)  NOT NULL,
   `group_description` text         NOT NULL,
   `admin_id`          int(11)      NOT NULL,
@@ -66,7 +58,7 @@ CREATE TABLE `community` (
 -- ============================================================
 
 CREATE TABLE `community_messages` (
-  `msg_id`   int(11)     NOT NULL,
+  `msg_id`   int(11)     NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `group_id` int(11)     NOT NULL,
   `user_id`  int(11)     NOT NULL,
   `subject`  varchar(30) NOT NULL DEFAULT 'general',
@@ -79,7 +71,7 @@ CREATE TABLE `community_messages` (
 -- ============================================================
 
 CREATE TABLE `focus` (
-  `focus_id`         int(11)      NOT NULL,
+  `focus_id`         int(11)      NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `user_id`          int(11)      NOT NULL,
   `task_name`        varchar(100)          DEFAULT NULL,
   `duration_minutes` int(11)               DEFAULT NULL,
@@ -96,10 +88,12 @@ INSERT INTO `focus` (`focus_id`, `user_id`, `task_name`, `duration_minutes`, `se
 -- ============================================================
 
 CREATE TABLE `follows` (
-  `follow_id`    int(11)  NOT NULL,
+  `follow_id`    int(11)  NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `follower_id`  int(11)  NOT NULL,
   `following_id` int(11)  NOT NULL,
-  `created_at`   datetime NOT NULL DEFAULT current_timestamp()
+  `created_at`   datetime NOT NULL DEFAULT current_timestamp(),
+  UNIQUE KEY `unique_follow` (`follower_id`, `following_id`),
+  INDEX `idx_following` (`following_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `follows` (`follow_id`, `follower_id`, `following_id`, `created_at`) VALUES
@@ -115,11 +109,12 @@ INSERT INTO `follows` (`follow_id`, `follower_id`, `following_id`, `created_at`)
 -- ============================================================
 
 CREATE TABLE `group_members` (
-  `id`        int(11) NOT NULL,
+  `id`        int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `member_id` int(11) NOT NULL,
   `group_id`  int(11) NOT NULL,
   `join_date` date    NOT NULL,
-  `admin_id`  int(11) NOT NULL
+  `admin_id`  int(11) NOT NULL,
+  UNIQUE KEY `unique_group_member` (`member_id`, `group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ============================================================
@@ -127,7 +122,7 @@ CREATE TABLE `group_members` (
 -- ============================================================
 
 CREATE TABLE `notes` (
-  `notes_id`          int(11)      NOT NULL,
+  `notes_id`          int(11)      NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `notes_title`       varchar(100) NOT NULL DEFAULT 'Untitled Note',
   `notes_description` text         NOT NULL,
   `created_date`      date         NOT NULL,
@@ -149,11 +144,24 @@ INSERT INTO `notes` (`notes_id`, `notes_title`, `notes_description`, `created_da
 (11, 'Mock Interview',           'Interview given daily Interview given daily',               '2026-03-27', 1, 'general',       '');
 
 -- ============================================================
+-- TABLE: note_categories
+-- ============================================================
+
+CREATE TABLE `note_categories` (
+  `cat_id`     int(11)     NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `user_id`    int(11)     NOT NULL,
+  `name`       varchar(60) NOT NULL,
+  `color`      varchar(20) DEFAULT '#5e72e4',
+  `created_at` timestamp   NULL DEFAULT current_timestamp(),
+  UNIQUE KEY `uq_user_cat` (`user_id`, `name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ============================================================
 -- TABLE: posts
 -- ============================================================
 
 CREATE TABLE `posts` (
-  `post_id`    int(11)     NOT NULL,
+  `post_id`    int(11)     NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `user_id`    int(11)     NOT NULL,
   `content`    text        NOT NULL,
   `subject`    varchar(30) NOT NULL DEFAULT 'general',
@@ -165,7 +173,7 @@ CREATE TABLE `posts` (
 -- ============================================================
 
 CREATE TABLE `post_comments` (
-  `comment_id` int(11)  NOT NULL,
+  `comment_id` int(11)  NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `post_id`    int(11)  NOT NULL,
   `user_id`    int(11)  NOT NULL,
   `comment`    text     NOT NULL,
@@ -177,9 +185,10 @@ CREATE TABLE `post_comments` (
 -- ============================================================
 
 CREATE TABLE `post_likes` (
-  `like_id` int(11) NOT NULL,
+  `like_id` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `post_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL
+  `user_id` int(11) NOT NULL,
+  UNIQUE KEY `unique_like` (`post_id`, `user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ============================================================
@@ -187,11 +196,12 @@ CREATE TABLE `post_likes` (
 -- ============================================================
 
 CREATE TABLE `room_members` (
-  `id`        int(11)  NOT NULL,
+  `id`        int(11)  NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `member_id` int(11)  NOT NULL,
   `room_id`   int(11)  NOT NULL,
   `join_date` date     NOT NULL,
-  `join_time` datetime DEFAULT current_timestamp()
+  `join_time` datetime DEFAULT current_timestamp(),
+  UNIQUE KEY `unique_member_room` (`member_id`, `room_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ============================================================
@@ -199,7 +209,7 @@ CREATE TABLE `room_members` (
 -- ============================================================
 
 CREATE TABLE `tasks` (
-  `task_id`          int(11)     NOT NULL,
+  `task_id`          int(11)     NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `user_id`          int(11)     NOT NULL,
   `task_title`       varchar(30) NOT NULL,
   `task_description` text        NOT NULL,
@@ -226,11 +236,11 @@ INSERT INTO `tasks` (`task_id`, `user_id`, `task_title`, `task_description`, `du
 (11, 1, 'Practice test',       'prepare of exam',                                   '2026-03-26', '22:59:00', 'once',   'medium', 'completed', '2026-03-26', '2026-03-27');
 
 -- ============================================================
--- TABLE: users  (v2.0 — includes all new profile columns)
+-- TABLE: users
 -- ============================================================
 
 CREATE TABLE `users` (
-  `user_id`          int(11)      NOT NULL COMMENT 'User Id',
+  `user_id`          int(11)      NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'User Id',
   `profile_pic`      text         NOT NULL,
   `background_pic`   text         NOT NULL,
   `profilename`      varchar(50)  NOT NULL COMMENT 'Display name',
@@ -249,7 +259,8 @@ CREATE TABLE `users` (
   `notif_channel`    enum('email','whatsapp','both','none') NOT NULL DEFAULT 'email',
   `privacy`          enum('public','friends','private')     NOT NULL DEFAULT 'public',
   `show_activity`    tinyint(1)   NOT NULL DEFAULT 1,
-  `avatar_id`        int(11)      NOT NULL DEFAULT 1
+  `avatar_id`        int(11)      NOT NULL DEFAULT 1,
+  UNIQUE KEY `email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `users` (`user_id`, `profile_pic`, `background_pic`, `profilename`, `username`, `whatsapp`, `email`, `password`, `bio`, `created_date`, `profession`, `stacks`, `streak`, `last_login_date`, `email_notif`, `whatsapp_notif`, `notif_channel`, `privacy`, `show_activity`, `avatar_id`) VALUES
@@ -265,11 +276,11 @@ INSERT INTO `users` (`user_id`, `profile_pic`, `background_pic`, `profilename`, 
 (10, 'profile10.jpg','bg10.jpg',  'Rahul Yadav',      'rahul_js',      '9234567890', 'rahul@gmail.com',            'Pass@123',   'JavaScript & React lover',      '2026-03-29', 'Professional', 0, 0, NULL, 1, 0, 'email', 'public', 1, 10);
 
 -- ============================================================
--- TABLE: uploaded_files  (NEW — file sharing in Notebook)
+-- TABLE: uploaded_files
 -- ============================================================
 
 CREATE TABLE `uploaded_files` (
-  `file_id`       int(11)      NOT NULL,
+  `file_id`       int(11)      NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `user_id`       int(11)      NOT NULL,
   `file_name`     varchar(255) NOT NULL,
   `file_original` varchar(255) NOT NULL,
@@ -278,157 +289,54 @@ CREATE TABLE `uploaded_files` (
   `file_size`     int(11)      NOT NULL DEFAULT 0,
   `shared`        tinyint(1)   NOT NULL DEFAULT 0,
   `shared_with`   text                  DEFAULT NULL,
-  `uploaded_at`   datetime     NOT NULL DEFAULT current_timestamp()
+  `uploaded_at`   datetime     NOT NULL DEFAULT current_timestamp(),
+  INDEX `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ============================================================
--- TABLE: stack_history  (NEW — audit log for stack awards)
+-- TABLE: stack_history
 -- ============================================================
 
 CREATE TABLE `stack_history` (
-  `id`           int(11)      NOT NULL,
+  `id`           int(11)      NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `user_id`      int(11)      NOT NULL,
   `reason`       varchar(100) NOT NULL,
   `stacks_given` int(11)      NOT NULL DEFAULT 1,
-  `awarded_at`   datetime     NOT NULL DEFAULT current_timestamp()
+  `awarded_at`   datetime     NOT NULL DEFAULT current_timestamp(),
+  INDEX `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `stack_history` (`id`, `user_id`, `reason`, `stacks_given`, `awarded_at`) VALUES
 (1, 1, 'focus_session', 1, '2026-02-16 22:49:10');
 
 -- ============================================================
--- TABLE: activity_log  (NEW — recent activity on profile page)
+-- TABLE: activity_log
 -- ============================================================
 
 CREATE TABLE `activity_log` (
-  `log_id`      int(11)      NOT NULL,
+  `log_id`      int(11)      NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `user_id`     int(11)      NOT NULL,
   `action_type` varchar(50)  NOT NULL,
   `action_desc` varchar(255) NOT NULL,
-  `created_at`  datetime     NOT NULL DEFAULT current_timestamp()
+  `created_at`  datetime     NOT NULL DEFAULT current_timestamp(),
+  INDEX `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `activity_log` (`log_id`, `user_id`, `action_type`, `action_desc`, `created_at`) VALUES
 (1, 1, 'focus', '+1 Stack — Focus Session', '2026-02-16 22:49:10');
 
 -- ============================================================
--- PRIMARY KEYS & INDEXES
+-- RESET AUTO_INCREMENT COUNTERS (Optional but clean)
 -- ============================================================
 
-ALTER TABLE `classroom`
-  ADD PRIMARY KEY (`room_id`);
-
-ALTER TABLE `classroom_messages`
-  ADD PRIMARY KEY (`msg_id`);
-
-ALTER TABLE `community`
-  ADD PRIMARY KEY (`group_id`);
-
-ALTER TABLE `community_messages`
-  ADD PRIMARY KEY (`msg_id`);
-
-ALTER TABLE `focus`
-  ADD PRIMARY KEY (`focus_id`);
-
-ALTER TABLE `follows`
-  ADD PRIMARY KEY (`follow_id`),
-  ADD UNIQUE KEY `unique_follow` (`follower_id`, `following_id`),
-  ADD INDEX `idx_following` (`following_id`);
-
-ALTER TABLE `group_members`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unique_group_member` (`member_id`, `group_id`);
-
-ALTER TABLE `notes`
-  ADD PRIMARY KEY (`notes_id`);
-
-ALTER TABLE `posts`
-  ADD PRIMARY KEY (`post_id`);
-
-ALTER TABLE `post_comments`
-  ADD PRIMARY KEY (`comment_id`);
-
-ALTER TABLE `post_likes`
-  ADD PRIMARY KEY (`like_id`),
-  ADD UNIQUE KEY `unique_like` (`post_id`, `user_id`);
-
-ALTER TABLE `room_members`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unique_member_room` (`member_id`, `room_id`);
-
-ALTER TABLE `tasks`
-  ADD PRIMARY KEY (`task_id`);
-
-ALTER TABLE `users`
-  ADD PRIMARY KEY (`user_id`),
-  ADD UNIQUE KEY `email` (`email`);
-
-ALTER TABLE `uploaded_files`
-  ADD PRIMARY KEY (`file_id`),
-  ADD INDEX `idx_user_id` (`user_id`);
-
-ALTER TABLE `stack_history`
-  ADD PRIMARY KEY (`id`),
-  ADD INDEX `idx_user_id` (`user_id`);
-
-ALTER TABLE `activity_log`
-  ADD PRIMARY KEY (`log_id`),
-  ADD INDEX `idx_user_id` (`user_id`);
-
--- ============================================================
--- AUTO_INCREMENT
--- ============================================================
-
-ALTER TABLE `classroom`
-  MODIFY `room_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
-ALTER TABLE `classroom_messages`
-  MODIFY `msg_id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `community`
-  MODIFY `group_id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `community_messages`
-  MODIFY `msg_id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `focus`
-  MODIFY `focus_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
-ALTER TABLE `follows`
-  MODIFY `follow_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
-
-ALTER TABLE `group_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `notes`
-  MODIFY `notes_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
-
-ALTER TABLE `posts`
-  MODIFY `post_id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `post_comments`
-  MODIFY `comment_id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `post_likes`
-  MODIFY `like_id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `room_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `tasks`
-  MODIFY `task_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
-
-ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'User Id', AUTO_INCREMENT=11;
-
-ALTER TABLE `uploaded_files`
-  MODIFY `file_id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `stack_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
-ALTER TABLE `activity_log`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+ALTER TABLE `classroom` AUTO_INCREMENT = 2;
+ALTER TABLE `focus` AUTO_INCREMENT = 2;
+ALTER TABLE `follows` AUTO_INCREMENT = 7;
+ALTER TABLE `notes` AUTO_INCREMENT = 15;
+ALTER TABLE `tasks` AUTO_INCREMENT = 12;
+ALTER TABLE `users` AUTO_INCREMENT = 11;
+ALTER TABLE `stack_history` AUTO_INCREMENT = 2;
+ALTER TABLE `activity_log` AUTO_INCREMENT = 2;
 
 COMMIT;
 

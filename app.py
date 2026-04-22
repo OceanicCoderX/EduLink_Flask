@@ -60,5 +60,5 @@ socket_events.init_socket_events(socketio)
 
 # --- Run ---
 if __name__ == "__main__":
-    print("EduLink running at http://127.0.0.1:5000")
-    socketio.run(app, debug=True, host="127.0.0.1", port=5000, allow_unsafe_werkzeug=True)
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port)

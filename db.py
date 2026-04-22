@@ -19,7 +19,7 @@ def get_db_connection():
         user=DB_USER,
         password=DB_PASSWORD,
         database=DB_NAME,
-        ssl_disabled=True,   # XAMPP ke liye — SSL band karo
+        ssl_disabled=False,   # Aiven ke liye — SSL enable karo
         use_pure=True
     )
     return mydb
