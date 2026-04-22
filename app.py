@@ -3,6 +3,9 @@
 # Updated: MAX_CONTENT_LENGTH for file uploads, Flask-Mail config
 # ============================================================
 
+from gevent import monkey
+monkey.patch_all()
+
 from flask import Flask
 from flask_socketio import SocketIO
 from config import (SECRET_KEY, MAX_CONTENT_LENGTH,

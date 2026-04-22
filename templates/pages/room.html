@@ -866,10 +866,19 @@ camBtn.addEventListener('click', async () => {
                 ? { deviceId: { exact: laptopCam.deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
                 : { width: { ideal: 1280 }, height: { ideal: 720 } };
 
-            localStream = await navigator.mediaDevices.getUserMedia({
-                video: videoConstraints,
-                audio: true
-            });
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+                    audio: true
+                });
+            } catch (audErr) {
+                console.warn("Could not get audio, trying video only:", audErr);
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+                    audio: false
+                });
+                showRoomToast('Joined without Mic (Mic access denied or not found)', 'orange');
+            }
 
             localVideo.srcObject = localStream;
             localVideo.style.display = 'block';
