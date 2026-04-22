@@ -9,7 +9,7 @@ import os
 DB_HOST     = os.environ.get("DB_HOST", "edulink-db-oceaniccodderx.h.aivencloud.com")
 DB_PORT     = int(os.environ.get("DB_PORT", 24980))
 DB_USER     = os.environ.get("DB_USER", "avnadmin")
-DB_PASSWORD = os.environ.get("DB_PASSWORD") # Set this in Render environment variables
+DB_PASSWORD = os.environ.get("DB_PASSWORD") # IMPORTANT: Set this in Render Dashboard
 DB_NAME     = os.environ.get("DB_NAME", "edulink")
 
 # --- Flask Config ---
