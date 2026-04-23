@@ -773,7 +773,7 @@ const iceConfig = {
 function updatePeerBadge() {
     // Count unique connected users in peers registry
     const activePeers = Object.keys(peers).length;
-    const totalInCall = activePeers; // Peers + Me
+    const totalInCall = activePeers + 1; // Peers + Me
     peerCountNum.textContent = totalInCall;
     peerCountBadge.classList.toggle('show', totalInCall > 0);
 }
