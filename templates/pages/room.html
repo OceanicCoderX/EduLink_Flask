@@ -909,13 +909,27 @@ camBtn.addEventListener('click', async () => {
                 localMicIcon.style.color = micOn ? '#2dce89' : '#f5494a';
             }
 
-            // Add tracks to existing peer connections
-            Object.keys(peers).forEach(sid => {
-                localStream.getTracks().forEach(t => peers[sid].addTrack(t, localStream));
+            // Add or replace tracks in existing peer connections and renegotiate
+            Object.keys(peers).forEach(async sid => {
+                const pc = peers[sid];
+                const transceivers = pc.getTransceivers();
+                localStream.getTracks().forEach(t => {
+                    const transceiver = transceivers.find(tr => tr.receiver && tr.receiver.track && tr.receiver.track.kind === t.kind);
+                    if (transceiver) {
+                        transceiver.direction = 'sendrecv';
+                        transceiver.sender.replaceTrack(t);
+                    } else {
+                        pc.addTrack(t, localStream);
+                    }
+                });
+                try {
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    socket.emit('webrtc_offer', { room_id: ROOM_ID, target_sid: sid, offer });
+                } catch(e) {
+                    console.error("Renegotiation error:", e);
+                }
             });
-            
-            // Re-emit ready if needed, though signals should flow normally now
-            socket.emit('webrtc_user_ready', { room_id: ROOM_ID });
         } catch (err) {
             showRoomToast('Camera access denied: ' + err.message, 'red');
         }
@@ -949,7 +963,27 @@ micBtn.addEventListener('click', async () => {
             micBtn.innerHTML = '<i class="fas fa-microphone"></i> Mic On';
             localMicIcon.className = 'fas fa-microphone';
             localMicIcon.style.color = '#2dce89';
-            socket.emit('webrtc_user_ready', { room_id: ROOM_ID });
+            
+            // Add or replace tracks and renegotiate
+            Object.keys(peers).forEach(async sid => {
+                const transceivers = peers[sid].getTransceivers();
+                localStream.getTracks().forEach(t => {
+                    const transceiver = transceivers.find(tr => tr.receiver && tr.receiver.track && tr.receiver.track.kind === t.kind);
+                    if (transceiver) {
+                        transceiver.direction = 'sendrecv';
+                        transceiver.sender.replaceTrack(t);
+                    } else {
+                        peers[sid].addTrack(t, localStream);
+                    }
+                });
+                try {
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    socket.emit('webrtc_offer', { room_id: ROOM_ID, target_sid: sid, offer });
+                } catch(e) {
+                    console.error("Renegotiation error:", e);
+                }
+            });
         } catch (err) {
             showRoomToast('Mic access denied: ' + err.message, 'red');
         }
@@ -983,28 +1017,57 @@ function stopMedia() {
 
 // ── WebRTC Signaling ──────────────────────────────────────────
 socket.on('webrtc_new_peer', async ({ sid, username, user_id }) => {
+    if (peers[sid]) return; // Prevent overwriting existing connection
     peerNames[sid] = username;
     const pc = createPC(sid, username, user_id);
     peers[sid] = pc;
     // Ensure the tile exists even before media flows
     getOrCreatePeerTile(sid, username, user_id);
-    if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    socket.emit('webrtc_offer', { room_id: ROOM_ID, target_sid: sid, offer });
+    
+    if (localStream) {
+        localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    } else {
+        // Add transceivers to receive media even if camera/mic is off
+        pc.addTransceiver('audio', { direction: 'recvonly' });
+        pc.addTransceiver('video', { direction: 'recvonly' });
+    }
+    
+    try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit('webrtc_offer', { room_id: ROOM_ID, target_sid: sid, offer });
+    } catch(e) {
+        console.error("webrtc_new_peer error:", e);
+    }
 });
 
 socket.on('webrtc_offer', async ({ from_sid, username, user_id, offer }) => {
-    const name = username || peerNames[from_sid] || 'Peer';
-    peerNames[from_sid] = name;
-    if (!peers[from_sid]) peers[from_sid] = createPC(from_sid, name, user_id);
-    getOrCreatePeerTile(from_sid, name, user_id);
-    const pc = peers[from_sid];
-    if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-    await pc.setRemoteDescription(new RTCSessionDescription(offer));
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    socket.emit('webrtc_answer', { target_sid: from_sid, answer });
+    try {
+        const name = username || peerNames[from_sid] || 'Peer';
+        peerNames[from_sid] = name;
+        if (!peers[from_sid]) {
+            peers[from_sid] = createPC(from_sid, name, user_id);
+            getOrCreatePeerTile(from_sid, name, user_id);
+            if (localStream) {
+                localStream.getTracks().forEach(t => peers[from_sid].addTrack(t, localStream));
+            } else {
+                peers[from_sid].addTransceiver('audio', { direction: 'recvonly' });
+                peers[from_sid].addTransceiver('video', { direction: 'recvonly' });
+            }
+        }
+        const pc = peers[from_sid];
+        
+        if (pc.signalingState !== 'stable') {
+            await pc.setLocalDescription({ type: 'rollback' });
+        }
+        
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socket.emit('webrtc_answer', { target_sid: from_sid, answer });
+    } catch(e) {
+        console.error("webrtc_offer error:", e);
+    }
 });
 
 socket.on('webrtc_answer', async ({ from_sid, answer }) => {
@@ -1037,25 +1100,42 @@ function createPC(sid, username, userId) {
         const name = peerNames[sid] || username || 'Peer';
         const tile = getOrCreatePeerTile(sid, name, userId);
         const vid  = tile.querySelector('video');
-        vid.srcObject = e.streams[0];
+        
+        let stream = vid.srcObject;
+        if (!stream) {
+            stream = new MediaStream();
+            vid.srcObject = stream;
+        }
+        stream.addTrack(e.track);
 
-        // Show video, hide avatar when track starts playing
-        vid.onloadedmetadata = () => {
-            const vTracks = e.streams[0].getVideoTracks();
-            const hasVideo = vTracks.length > 0 && vTracks[0].enabled && vTracks[0].readyState === 'live';
+        const checkVideoState = () => {
+            const vTracks = stream.getVideoTracks();
+            let hasVideo = false;
+            if (vTracks.length > 0) {
+                const vt = vTracks[0];
+                hasVideo = vt.enabled && vt.readyState === 'live' && !vt.muted;
+            }
+            
             if (hasVideo) {
                 vid.style.display = 'block';
                 const avatarBox = tile.querySelector('.peer-avatar-box');
                 if (avatarBox) avatarBox.style.display = 'none';
+            } else {
+                vid.style.display = 'none';
+                const avatarBox = tile.querySelector('.peer-avatar-box');
+                if (avatarBox) avatarBox.style.display = 'flex';
             }
             tile.classList.toggle('cam-active', hasVideo);
         };
 
-        // Monitor video track mute/enable
-        e.streams[0].getVideoTracks().forEach(track => {
-            track.addEventListener('mute',   () => tile.classList.remove('cam-active'));
-            track.addEventListener('unmute', () => tile.classList.add('cam-active'));
-        });
+        vid.onloadedmetadata = () => {
+            vid.play().catch(console.error);
+            checkVideoState();
+        };
+
+        e.track.addEventListener('unmute', checkVideoState);
+        e.track.addEventListener('mute', checkVideoState);
+        e.track.addEventListener('ended', checkVideoState);
     };
 
     pc.onconnectionstatechange = () => {
