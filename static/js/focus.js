@@ -60,7 +60,7 @@
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('sessionsCount').textContent = data.total_sessions;
-                    document.getElementById('totalTime').textContent = data.total_sessions;
+                    document.getElementById('totalTime').textContent = data.total_minutes;
                     document.getElementById('streakCount').textContent = data.total_stacks;
 
                     // JS variables bhi update karo taaki current session sahi calculate ho
