@@ -605,7 +605,6 @@ function saveNotes() {
 
 // ── Socket.IO ────────────────────────────────────────────────
 const socket = io();
-socket.emit('join_classroom_room', { room_id: ROOM_ID, username: MY_NAME });
 
 socket.on('classroom_new_message', (data) => {
     appendMessage(data.username, data.message, data.time, data.user_id === MY_USER_ID);
@@ -774,7 +773,7 @@ const iceConfig = {
 function updatePeerBadge() {
     // Count unique connected users in peers registry
     const activePeers = Object.keys(peers).length;
-    const totalInCall = activePeers + 1; // Peers + Me
+    const totalInCall = activePeers; // Peers + Me
     peerCountNum.textContent = totalInCall;
     peerCountBadge.classList.toggle('show', totalInCall > 0);
 }
@@ -842,10 +841,12 @@ function removePeerTile(sid) {
 // Join WebRTC room immediately so we can receive others' streams
 // even if our own mic/cam is off.
 socket.on('connect', () => {
+    socket.emit('join_classroom_room', { room_id: ROOM_ID, username: MY_NAME });
     socket.emit('webrtc_user_ready', { room_id: ROOM_ID });
 });
 // Fallback if already connected
 if (socket.connected) {
+    socket.emit('join_classroom_room', { room_id: ROOM_ID, username: MY_NAME });
     socket.emit('webrtc_user_ready', { room_id: ROOM_ID });
 }
 
