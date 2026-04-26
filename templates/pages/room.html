@@ -866,189 +866,138 @@ if (socket.connected) {
 
 // ── Camera Toggle ──────────────────────────────────────────────
 camBtn.addEventListener('click', async () => {
+    let needsRenegotiation = false;
     if (!localStream) {
+        localStream = new MediaStream();
+    }
+    
+    let vTracks = localStream.getVideoTracks();
+    
+    if (vTracks.length === 0) {
         try {
-            // Get the first available video input device (avoids phone camera via facingMode)
             const devices = await navigator.mediaDevices.enumerateDevices();
             const videoCams = devices.filter(d => d.kind === 'videoinput');
-            // Prefer a device with "integrated" or "webcam" in the label (laptop cam),
-            // but fall back to the first available camera.
-            const laptopCam = videoCams.find(d =>
-                /integrated|webcam|hd cam|built.?in|facetime|usb2|usb 2|laptop/i.test(d.label)
-            ) || videoCams[0];
+            const laptopCam = videoCams.find(d => /integrated|webcam|hd cam|built.?in|facetime|usb2|usb 2|laptop/i.test(d.label)) || videoCams[0];
+            const videoConstraints = laptopCam ? { deviceId: { exact: laptopCam.deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" };
 
-            const videoConstraints = laptopCam
-                ? { deviceId: { exact: laptopCam.deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
-                : { width: { ideal: 1280 }, height: { ideal: 720 } };
-
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: { 
-                        facingMode: "user",
-                        width: { ideal: 1280 }, 
-                        height: { ideal: 720 } 
-                    },
-                    audio: true
-                });
-            } catch (audErr) {
-                console.warn("Could not get audio, trying video only:", audErr);
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: { 
-                        facingMode: "user",
-                        width: { ideal: 1280 }, 
-                        height: { ideal: 720 } 
-                    },
-                    audio: false
-                });
-                showRoomToast('Joined without Mic (Mic access denied or not found)', 'orange');
-            }
-
-            localVideo.srcObject = localStream;
-            localVideo.style.display = 'block';
-            mainCamOff.style.display = 'none';
+            const tempStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+            const vTrack = tempStream.getVideoTracks()[0];
+            localStream.addTrack(vTrack);
+            vTracks = [vTrack];
             camOn = true;
-            camBtn.className = 'video-btn btn-cam';
-            camBtn.innerHTML = '<i class="fas fa-video"></i> Cam On';
-
-            // Sync mic state with the stream
-            const aTracks = localStream.getAudioTracks();
-            if (aTracks.length) {
-                micOn = aTracks[0].enabled;
-                micBtn.className = 'video-btn btn-mic' + (micOn ? '' : ' off');
-                micBtn.innerHTML = micOn
-                    ? '<i class="fas fa-microphone"></i> Mic On'
-                    : '<i class="fas fa-microphone-slash"></i> Mic Off';
-                localMicIcon.className = micOn
-                    ? 'fas fa-microphone'
-                    : 'fas fa-microphone-slash';
-                localMicIcon.style.color = micOn ? '#2dce89' : '#f5494a';
-                
-                const drawerMicIcon = document.getElementById('mic_user_' + MY_USER_ID);
-                if (drawerMicIcon) {
-                    drawerMicIcon.className = micOn ? 'fas fa-microphone peer-mic-icon' : 'fas fa-microphone-slash peer-mic-icon muted';
-                }
-            }
-
-            const drawerLocalVideo = document.getElementById('drawerLocalVideo');
-            if (drawerLocalVideo) {
-                drawerLocalVideo.srcObject = localStream;
-                drawerLocalVideo.style.display = 'block';
-                document.getElementById('tile_user_' + MY_USER_ID).classList.add('cam-active');
-            }
-            socket.emit('webrtc_media_state', { room_id: ROOM_ID, cam: camOn, mic: micOn });
-
-            // Add or replace tracks in existing peer connections and renegotiate
-            Object.keys(peers).forEach(async sid => {
-                const pc = peers[sid];
-                const transceivers = pc.getTransceivers();
-                localStream.getTracks().forEach(t => {
-                    const transceiver = transceivers.find(tr => tr.receiver && tr.receiver.track && tr.receiver.track.kind === t.kind);
-                    if (transceiver) {
-                        transceiver.direction = 'sendrecv';
-                        transceiver.sender.replaceTrack(t);
-                    } else {
-                        pc.addTrack(t, localStream);
-                    }
-                });
-                try {
-                    const offer = await pc.createOffer();
-                    await pc.setLocalDescription(offer);
-                    socket.emit('webrtc_offer', { room_id: ROOM_ID, target_sid: sid, offer });
-                } catch(e) {
-                    console.error("Renegotiation error:", e);
-                }
-            });
+            needsRenegotiation = true;
         } catch (err) {
             showRoomToast('Camera access denied: ' + err.message, 'red');
+            return;
         }
     } else {
-        const vTracks = localStream.getVideoTracks();
-        if (vTracks.length) {
-            vTracks[0].enabled = !vTracks[0].enabled;
-            camOn = vTracks[0].enabled;
+        vTracks[0].enabled = !vTracks[0].enabled;
+        camOn = vTracks[0].enabled;
+    }
+
+    if (camOn) {
+        localVideo.srcObject = localStream;
+        localVideo.style.display = 'block';
+        mainCamOff.style.display = 'none';
+        const drawerLocalVideo = document.getElementById('drawerLocalVideo');
+        if (drawerLocalVideo) {
+            drawerLocalVideo.srcObject = localStream;
+            drawerLocalVideo.style.display = 'block';
+            document.getElementById('tile_user_' + MY_USER_ID).classList.add('cam-active');
         }
-        if (camOn) {
-            localVideo.style.display = 'block';
-            mainCamOff.style.display = 'none';
-            if (document.getElementById('drawerLocalVideo')) {
-                document.getElementById('drawerLocalVideo').style.display = 'block';
-                document.getElementById('tile_user_' + MY_USER_ID).classList.add('cam-active');
-            }
-        } else {
-            localVideo.style.display = 'none';
-            mainCamOff.style.display = 'flex';
-            if (document.getElementById('drawerLocalVideo')) {
-                document.getElementById('drawerLocalVideo').style.display = 'none';
-                document.getElementById('tile_user_' + MY_USER_ID).classList.remove('cam-active');
-            }
+    } else {
+        localVideo.style.display = 'none';
+        mainCamOff.style.display = 'flex';
+        const drawerLocalVideo = document.getElementById('drawerLocalVideo');
+        if (drawerLocalVideo) {
+            drawerLocalVideo.style.display = 'none';
+            document.getElementById('tile_user_' + MY_USER_ID).classList.remove('cam-active');
         }
-        camBtn.className = 'video-btn btn-cam' + (camOn ? '' : ' off');
-        camBtn.innerHTML = camOn
-            ? '<i class="fas fa-video"></i> Cam On'
-            : '<i class="fas fa-video-slash"></i> Cam Off';
-        socket.emit('webrtc_media_state', { room_id: ROOM_ID, cam: camOn, mic: micOn });
+    }
+    camBtn.className = 'video-btn btn-cam' + (camOn ? '' : ' off');
+    camBtn.innerHTML = camOn ? '<i class="fas fa-video"></i> Cam On' : '<i class="fas fa-video-slash"></i> Cam Off';
+    
+    socket.emit('webrtc_media_state', { room_id: ROOM_ID, cam: camOn, mic: micOn });
+
+    if (needsRenegotiation) {
+        Object.keys(peers).forEach(async sid => {
+            const pc = peers[sid];
+            const transceivers = pc.getTransceivers();
+            localStream.getTracks().forEach(t => {
+                const transceiver = transceivers.find(tr => tr.receiver && tr.receiver.track && tr.receiver.track.kind === t.kind);
+                if (transceiver) {
+                    transceiver.direction = 'sendrecv';
+                    transceiver.sender.replaceTrack(t);
+                } else {
+                    pc.addTrack(t, localStream);
+                }
+            });
+            try {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                socket.emit('webrtc_offer', { room_id: ROOM_ID, target_sid: sid, offer });
+            } catch(e) { console.error("Renegotiation error:", e); }
+        });
     }
 });
 
 // ── Mic Toggle ────────────────────────────────────────────────
 micBtn.addEventListener('click', async () => {
+    let needsRenegotiation = false;
     if (!localStream) {
+        localStream = new MediaStream();
+    }
+    
+    let aTracks = localStream.getAudioTracks();
+    
+    if (aTracks.length === 0) {
         try {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+            const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const aTrack = tempStream.getAudioTracks()[0];
+            localStream.addTrack(aTrack);
+            aTracks = [aTrack];
             micOn = true;
-            micBtn.className = 'video-btn btn-mic';
-            micBtn.innerHTML = '<i class="fas fa-microphone"></i> Mic On';
-            localMicIcon.className = 'fas fa-microphone';
-            localMicIcon.style.color = '#2dce89';
-            
-            const drawerMicIcon = document.getElementById('mic_user_' + MY_USER_ID);
-            if (drawerMicIcon) {
-                drawerMicIcon.className = 'fas fa-microphone peer-mic-icon';
-            }
-            socket.emit('webrtc_media_state', { room_id: ROOM_ID, cam: camOn, mic: micOn });
-            
-            // Add or replace tracks and renegotiate
-            Object.keys(peers).forEach(async sid => {
-                const pc = peers[sid];
-                const transceivers = pc.getTransceivers();
-                localStream.getTracks().forEach(t => {
-                    const transceiver = transceivers.find(tr => tr.receiver && tr.receiver.track && tr.receiver.track.kind === t.kind);
-                    if (transceiver) {
-                        transceiver.direction = 'sendrecv';
-                        transceiver.sender.replaceTrack(t);
-                    } else {
-                        pc.addTrack(t, localStream);
-                    }
-                });
-                try {
-                    const offer = await pc.createOffer();
-                    await pc.setLocalDescription(offer);
-                    socket.emit('webrtc_offer', { room_id: ROOM_ID, target_sid: sid, offer });
-                } catch(e) {
-                    console.error("Renegotiation error:", e);
-                }
-            });
+            needsRenegotiation = true;
         } catch (err) {
             showRoomToast('Mic access denied: ' + err.message, 'red');
+            return;
         }
     } else {
-        const aTracks = localStream.getAudioTracks();
-        if (aTracks.length) {
-            aTracks[0].enabled = !aTracks[0].enabled;
-            micOn = aTracks[0].enabled;
-        }
-        micBtn.className = 'video-btn btn-mic' + (micOn ? '' : ' off');
-        micBtn.innerHTML = micOn
-            ? '<i class="fas fa-microphone"></i> Mic On'
-            : '<i class="fas fa-microphone-slash"></i> Mic Off';
-        localMicIcon.className = micOn ? 'fas fa-microphone' : 'fas fa-microphone-slash';
-        localMicIcon.style.color = micOn ? '#2dce89' : '#f5494a';
-        
-        const drawerMicIcon = document.getElementById('mic_user_' + MY_USER_ID);
-        if (drawerMicIcon) {
-            drawerMicIcon.className = micOn ? 'fas fa-microphone peer-mic-icon' : 'fas fa-microphone-slash peer-mic-icon muted';
-        }
-        socket.emit('webrtc_media_state', { room_id: ROOM_ID, cam: camOn, mic: micOn });
+        aTracks[0].enabled = !aTracks[0].enabled;
+        micOn = aTracks[0].enabled;
+    }
+
+    micBtn.className = 'video-btn btn-mic' + (micOn ? '' : ' off');
+    micBtn.innerHTML = micOn ? '<i class="fas fa-microphone"></i> Mic On' : '<i class="fas fa-microphone-slash"></i> Mic Off';
+    localMicIcon.className = micOn ? 'fas fa-microphone' : 'fas fa-microphone-slash';
+    localMicIcon.style.color = micOn ? '#2dce89' : '#f5494a';
+    
+    const drawerMicIcon = document.getElementById('mic_user_' + MY_USER_ID);
+    if (drawerMicIcon) {
+        drawerMicIcon.className = micOn ? 'fas fa-microphone peer-mic-icon' : 'fas fa-microphone-slash peer-mic-icon muted';
+    }
+    
+    socket.emit('webrtc_media_state', { room_id: ROOM_ID, cam: camOn, mic: micOn });
+    
+    if (needsRenegotiation) {
+        Object.keys(peers).forEach(async sid => {
+            const pc = peers[sid];
+            const transceivers = pc.getTransceivers();
+            localStream.getTracks().forEach(t => {
+                const transceiver = transceivers.find(tr => tr.receiver && tr.receiver.track && tr.receiver.track.kind === t.kind);
+                if (transceiver) {
+                    transceiver.direction = 'sendrecv';
+                    transceiver.sender.replaceTrack(t);
+                } else {
+                    pc.addTrack(t, localStream);
+                }
+            });
+            try {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                socket.emit('webrtc_offer', { room_id: ROOM_ID, target_sid: sid, offer });
+            } catch(e) { console.error("Renegotiation error:", e); }
+        });
     }
 });
 
@@ -1073,6 +1022,9 @@ socket.on('webrtc_new_peer', async ({ sid, username, user_id }) => {
     peers[sid] = pc;
     // Ensure the tile exists even before media flows
     getOrCreatePeerTile(sid, username, user_id);
+    
+    // Broadcast my current media state so the new peer knows immediately
+    socket.emit('webrtc_media_state', { room_id: ROOM_ID, cam: camOn, mic: micOn });
     
     if (localStream) {
         localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
@@ -1146,16 +1098,24 @@ socket.on('webrtc_media_state', ({ sid, user_id, cam, mic }) => {
         micIcon.className = mic ? 'fas fa-microphone peer-mic-icon' : 'fas fa-microphone-slash peer-mic-icon muted';
     }
     
-    // Update camera border
+    // Update camera border and display
     const tileId = user_id ? 'tile_user_' + user_id : 'ptile_' + sid;
     const tile = document.getElementById(tileId);
-    if (tile && !cam) {
-        // Fallback hide if stream event didn't catch it
+    if (tile) {
         const vid = tile.querySelector('video');
-        if (vid) vid.style.display = 'none';
         const avatarBox = tile.querySelector('.peer-avatar-box');
-        if (avatarBox) avatarBox.style.display = 'flex';
-        tile.classList.remove('cam-active');
+        if (cam) {
+            if (vid) {
+                vid.style.display = 'block';
+                vid.play().catch(e => console.warn(e));
+            }
+            if (avatarBox) avatarBox.style.display = 'none';
+            tile.classList.add('cam-active');
+        } else {
+            if (vid) vid.style.display = 'none';
+            if (avatarBox) avatarBox.style.display = 'flex';
+            tile.classList.remove('cam-active');
+        }
     }
 });
 
