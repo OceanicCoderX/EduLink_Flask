@@ -39,6 +39,15 @@ def init_socket_events(socketio):
         sid        = request.sid
 
         join_room(f"classroom_{room_id}")
+        
+        room_key = f"classroom_{room_id}"
+        old_sid = None
+        
+        # Check if the user is already in the room with an older connection
+        for existing_sid, info in list(_sid_to_room.items()):
+            if info['room_id'] == room_id and info['user_id'] == user_id and existing_sid != sid:
+                old_sid = existing_sid
+                break
 
         # Register SID mapping for disconnect cleanup
         _sid_to_room[sid] = {
@@ -47,12 +56,21 @@ def init_socket_events(socketio):
             'username': username
         }
 
-        emit('classroom_user_joined', {
-            'user_id':    user_id,
-            'username':   username,
-            'profession': profession,
-            'message':    f"{username} joined the room"
-        }, to=f"classroom_{room_id}")
+        if old_sid:
+            # Clean up old connection to prevent duplicate streams
+            if room_key in _webrtc_rooms and old_sid in _webrtc_rooms[room_key]:
+                _webrtc_rooms[room_key].pop(old_sid)
+                emit('webrtc_peer_left', {'sid': old_sid, 'username': username}, to=room_key)
+            if old_sid in _sid_to_room:
+                del _sid_to_room[old_sid]
+        else:
+            # Only announce join if it's a completely new session
+            emit('classroom_user_joined', {
+                'user_id':    user_id,
+                'username':   username,
+                'profession': profession,
+                'message':    f"{username} joined the room"
+            }, to=f"classroom_{room_id}")
 
 
     @socketio.on('leave_classroom_room')
@@ -316,15 +334,19 @@ def init_socket_events(socketio):
         room_key = f"classroom_{room_id}"
         username = session.get('profilename', 'User')
         sid      = request.sid
+        user_id  = session.get('user_id')
 
         # Register this SID in the WebRTC room
         if room_key not in _webrtc_rooms:
             _webrtc_rooms[room_key] = {}
 
-        user_id  = session.get('user_id')
+        # Cleanup duplicate WebRTC connections for the same user
+        for existing_sid in list(_webrtc_rooms[room_key].keys()):
+            if existing_sid in _sid_to_room and _sid_to_room[existing_sid]['user_id'] == user_id and existing_sid != sid:
+                _webrtc_rooms[room_key].pop(existing_sid)
+                emit('webrtc_peer_left', {'sid': existing_sid, 'username': username}, to=room_key)
 
         # Notify ALL other peers in the room that this user is ready
-        # Each other peer will create an RTCPeerConnection and send an offer
         for peer_sid in list(_webrtc_rooms[room_key].keys()):
             emit('webrtc_new_peer', {
                 'sid':      sid,
