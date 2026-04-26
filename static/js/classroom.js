@@ -2,8 +2,8 @@
 // classroom.js — EduLink Classroom Page (DB-backed, no localStorage)
 // ============================================================
 
-let currentTab      = 'active';
-let pendingJoinId   = null;  // Room ID waiting for password confirm
+let currentTab = 'active';
+let pendingJoinId = null;  // Room ID waiting for password confirm
 
 document.addEventListener('DOMContentLoaded', () => {
     loadStats();
@@ -19,11 +19,11 @@ function loadStats() {
         .then(r => r.json())
         .then(d => {
             document.getElementById('totalCreated').textContent = d.rooms_created;
-            document.getElementById('totalJoined').textContent  = d.rooms_joined;
-            document.getElementById('totalHours').textContent   = d.hours_spent + 'h';
-            document.getElementById('totalStacks').textContent  = d.stacks;
+            document.getElementById('totalJoined').textContent = d.rooms_joined;
+            document.getElementById('totalHours').textContent = d.hours_spent + 'h';
+            document.getElementById('totalStacks').textContent = d.stacks;
         })
-        .catch(() => {});
+        .catch(() => { });
 }
 
 
@@ -53,8 +53,8 @@ function loadMyRooms() {
                             ${r.room_name}
                             ${r.has_password ? '<i class="fas fa-lock" style="font-size:12px;color:var(--accent-2);margin-left:4px;"></i>' : ''}
                             ${roomStatus === 'closed'
-                                ? '<span style="font-size:11px;color:#f5494a;margin-left:6px;">[Closed]</span>'
-                                : '<span style="font-size:11px;color:#2dce89;margin-left:6px;">● Active</span>'}
+                        ? '<span style="font-size:11px;color:#f5494a;margin-left:6px;">[Closed]</span>'
+                        : '<span style="font-size:11px;color:#2dce89;margin-left:6px;">● Active</span>'}
                         </div>
                         <div class="room-meta">
                             ${r.subject} · Created ${r.created_date}
@@ -108,9 +108,12 @@ function loadJoinedRooms() {
                         <div class="room-name">
                             ${r.room_name}
                             ${r.status === 'active'
-                                ? '<span style="font-size:11px;color:#2dce89;margin-left:6px;">● Active</span>'
-                                : '<span style="font-size:11px;color:#f5494a;margin-left:6px;">[Closed by admin]</span>'}
+                    ? '<span style="font-size:11px;color:#2dce89;margin-left:6px;">● Active</span>'
+                    : '<span style="font-size:11px;color:#f5494a;margin-left:6px;">[Closed by admin]</span>'}
 
+                        </div>
+                        <div style="margin-top:4px;font-size:12px;color:var(--text-muted);">
+                            Room ID: <strong>${r.room_id}</strong>
                         </div>
                         <div class="room-meta">
                             ${r.subject} · Host: ${r.admin_name} · Joined ${r.join_date}
@@ -194,8 +197,8 @@ function initListeners() {
     });
 
     // Modal: open / close
-    document.getElementById('createRoomBtn').onclick  = openModal;
-    document.getElementById('closeModalBtn').onclick  = closeModal;
+    document.getElementById('createRoomBtn').onclick = openModal;
+    document.getElementById('closeModalBtn').onclick = closeModal;
     document.getElementById('cancelCreateBtn').onclick = closeModal;
 
     // Password checkbox toggle
@@ -215,8 +218,8 @@ function initListeners() {
 
     // Password modal confirm
     document.getElementById('closePwdModalBtn').onclick = closePwdModal;
-    document.getElementById('cancelPwdBtn').onclick     = closePwdModal;
-    document.getElementById('confirmJoinBtn').onclick   = confirmJoin;
+    document.getElementById('cancelPwdBtn').onclick = closePwdModal;
+    document.getElementById('confirmJoinBtn').onclick = confirmJoin;
     document.getElementById('joinPasswordInput').addEventListener('keydown', e => {
         if (e.key === 'Enter') confirmJoin();
     });
@@ -248,13 +251,13 @@ function closePwdModal() {
 
 
 function createRoom() {
-    const name    = document.getElementById('roomName').value.trim();
+    const name = document.getElementById('roomName').value.trim();
     const subject = document.getElementById('roomSubject').value.trim();
-    const desc    = document.getElementById('roomDescription').value.trim();
+    const desc = document.getElementById('roomDescription').value.trim();
     const pwdProtected = document.getElementById('passwordProtected').checked;
     const password = pwdProtected ? document.getElementById('roomPassword').value.trim() : '';
 
-    if (!name)    return showToast('Room name is required!', 'error');
+    if (!name) return showToast('Room name is required!', 'error');
     if (!subject) return showToast('Subject is required!', 'error');
     if (pwdProtected && !password) return showToast('Enter a password!', 'error');
 
@@ -359,7 +362,7 @@ function showToast(msg, type) {
     }
     const t = document.createElement('div');
     t.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;
-        background:${type==='error'?'#f5494a':'#2dce89'};color:white;
+        background:${type === 'error' ? '#f5494a' : '#2dce89'};color:white;
         padding:12px 20px;border-radius:10px;font-size:14px;font-weight:500;
         box-shadow:0 4px 20px rgba(0,0,0,0.2);animation:slideIn .3s ease;`;
     t.textContent = msg;
