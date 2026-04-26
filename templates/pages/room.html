@@ -412,6 +412,20 @@
                 <div class="drawer-header">
                     <i class="fas fa-users"></i> Peers
                 </div>
+                
+                <!-- Local User Tile in Drawer -->
+                <div class="peer-tile" id="tile_user_{{ user.user_id }}" data-username="{{ user.profilename }}">
+                    <video id="drawerLocalVideo" autoplay playsinline muted style="display:none;"></video>
+                    <div class="peer-avatar-box">
+                        <div class="peer-avatar">{{ user.profilename[0]|upper if user.profilename else 'Y' }}</div>
+                        <div class="peer-avatar-name">{{ user.profilename }} (You)</div>
+                    </div>
+                    <div class="peer-label">
+                        <span class="peer-name-label">You</span>
+                        <i class="fas fa-microphone-slash peer-mic-icon muted" id="mic_user_{{ user.user_id }}" title="Mic Off"></i>
+                    </div>
+                </div>
+
                 <!-- Pre-render all members (except current user) -->
                 {% for m in members %}
                 {% if m.user_id != user.user_id %}
@@ -908,7 +922,20 @@ camBtn.addEventListener('click', async () => {
                     ? 'fas fa-microphone'
                     : 'fas fa-microphone-slash';
                 localMicIcon.style.color = micOn ? '#2dce89' : '#f5494a';
+                
+                const drawerMicIcon = document.getElementById('mic_user_' + MY_USER_ID);
+                if (drawerMicIcon) {
+                    drawerMicIcon.className = micOn ? 'fas fa-microphone peer-mic-icon' : 'fas fa-microphone-slash peer-mic-icon muted';
+                }
             }
+
+            const drawerLocalVideo = document.getElementById('drawerLocalVideo');
+            if (drawerLocalVideo) {
+                drawerLocalVideo.srcObject = localStream;
+                drawerLocalVideo.style.display = 'block';
+                document.getElementById('tile_user_' + MY_USER_ID).classList.add('cam-active');
+            }
+            socket.emit('webrtc_media_state', { room_id: ROOM_ID, cam: camOn, mic: micOn });
 
             // Add or replace tracks in existing peer connections and renegotiate
             Object.keys(peers).forEach(async sid => {
@@ -943,14 +970,23 @@ camBtn.addEventListener('click', async () => {
         if (camOn) {
             localVideo.style.display = 'block';
             mainCamOff.style.display = 'none';
+            if (document.getElementById('drawerLocalVideo')) {
+                document.getElementById('drawerLocalVideo').style.display = 'block';
+                document.getElementById('tile_user_' + MY_USER_ID).classList.add('cam-active');
+            }
         } else {
             localVideo.style.display = 'none';
             mainCamOff.style.display = 'flex';
+            if (document.getElementById('drawerLocalVideo')) {
+                document.getElementById('drawerLocalVideo').style.display = 'none';
+                document.getElementById('tile_user_' + MY_USER_ID).classList.remove('cam-active');
+            }
         }
         camBtn.className = 'video-btn btn-cam' + (camOn ? '' : ' off');
         camBtn.innerHTML = camOn
             ? '<i class="fas fa-video"></i> Cam On'
             : '<i class="fas fa-video-slash"></i> Cam Off';
+        socket.emit('webrtc_media_state', { room_id: ROOM_ID, cam: camOn, mic: micOn });
     }
 });
 
@@ -965,16 +1001,23 @@ micBtn.addEventListener('click', async () => {
             localMicIcon.className = 'fas fa-microphone';
             localMicIcon.style.color = '#2dce89';
             
+            const drawerMicIcon = document.getElementById('mic_user_' + MY_USER_ID);
+            if (drawerMicIcon) {
+                drawerMicIcon.className = 'fas fa-microphone peer-mic-icon';
+            }
+            socket.emit('webrtc_media_state', { room_id: ROOM_ID, cam: camOn, mic: micOn });
+            
             // Add or replace tracks and renegotiate
             Object.keys(peers).forEach(async sid => {
-                const transceivers = peers[sid].getTransceivers();
+                const pc = peers[sid];
+                const transceivers = pc.getTransceivers();
                 localStream.getTracks().forEach(t => {
                     const transceiver = transceivers.find(tr => tr.receiver && tr.receiver.track && tr.receiver.track.kind === t.kind);
                     if (transceiver) {
                         transceiver.direction = 'sendrecv';
                         transceiver.sender.replaceTrack(t);
                     } else {
-                        peers[sid].addTrack(t, localStream);
+                        pc.addTrack(t, localStream);
                     }
                 });
                 try {
@@ -1000,6 +1043,12 @@ micBtn.addEventListener('click', async () => {
             : '<i class="fas fa-microphone-slash"></i> Mic Off';
         localMicIcon.className = micOn ? 'fas fa-microphone' : 'fas fa-microphone-slash';
         localMicIcon.style.color = micOn ? '#2dce89' : '#f5494a';
+        
+        const drawerMicIcon = document.getElementById('mic_user_' + MY_USER_ID);
+        if (drawerMicIcon) {
+            drawerMicIcon.className = micOn ? 'fas fa-microphone peer-mic-icon' : 'fas fa-microphone-slash peer-mic-icon muted';
+        }
+        socket.emit('webrtc_media_state', { room_id: ROOM_ID, cam: camOn, mic: micOn });
     }
 });
 
@@ -1089,6 +1138,27 @@ socket.on('webrtc_peer_left', ({ sid, username }) => {
     }
 });
 
+socket.on('webrtc_media_state', ({ sid, user_id, cam, mic }) => {
+    // Update the mic icon in the drawer
+    const micIconId = user_id ? 'mic_user_' + user_id : 'mic_' + sid;
+    const micIcon = document.getElementById(micIconId);
+    if (micIcon) {
+        micIcon.className = mic ? 'fas fa-microphone peer-mic-icon' : 'fas fa-microphone-slash peer-mic-icon muted';
+    }
+    
+    // Update camera border
+    const tileId = user_id ? 'tile_user_' + user_id : 'ptile_' + sid;
+    const tile = document.getElementById(tileId);
+    if (tile && !cam) {
+        // Fallback hide if stream event didn't catch it
+        const vid = tile.querySelector('video');
+        if (vid) vid.style.display = 'none';
+        const avatarBox = tile.querySelector('.peer-avatar-box');
+        if (avatarBox) avatarBox.style.display = 'flex';
+        tile.classList.remove('cam-active');
+    }
+});
+
 function createPC(sid, username, userId) {
     const pc = new RTCPeerConnection(iceConfig);
 
@@ -1121,6 +1191,7 @@ function createPC(sid, username, userId) {
                 vid.style.display = 'block';
                 const avatarBox = tile.querySelector('.peer-avatar-box');
                 if (avatarBox) avatarBox.style.display = 'none';
+                vid.play().catch(e => console.warn("Play error:", e));
             } else {
                 vid.style.display = 'none';
                 const avatarBox = tile.querySelector('.peer-avatar-box');

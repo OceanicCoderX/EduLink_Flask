@@ -373,6 +373,23 @@ def init_socket_events(socketio):
         }, to=target_sid)
 
 
+    @socketio.on('webrtc_media_state')
+    def handle_webrtc_media_state(data):
+        """Relay camera and mic state to all peers in the room to update UI."""
+        room_id = str(data.get('room_id'))
+        room_key = f"classroom_{room_id}"
+        cam = data.get('cam', False)
+        mic = data.get('mic', False)
+        user_id = session.get('user_id')
+        
+        emit('webrtc_media_state', {
+            'sid': request.sid,
+            'user_id': user_id,
+            'cam': cam,
+            'mic': mic
+        }, to=room_key, include_self=False)
+
+
     @socketio.on('disconnect')
     def handle_disconnect():
         """Clean up registries and notify rooms when a user disconnects (tab closed/refreshed)."""
