@@ -1679,6 +1679,17 @@ textarea {
     justify-content: center;
 }
 
+/* Navbar Custom Actions for Mobile/Desktop */
+.mobile-actions {
+    display: none;
+}
+.desktop-actions {
+    display: flex;
+}
+.mobile-only-btn {
+    display: none !important;
+}
+
 /* Tablet */
 @media (max-width: 768px) {
     :root {
@@ -1753,6 +1764,24 @@ textarea {
         font-size: 72px;
     }
 
+    .desktop-actions {
+        display: none !important;
+    }
+
+    .mobile-actions {
+        display: block !important;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .mobile-only-btn {
+        display: block !important;
+    }
+
+    .feedback-form-container {
+        display: none;
+    }
 }
 
 /* Mobile */
@@ -1770,7 +1799,16 @@ textarea {
     }
 
     .stats-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+    
+    .stats-grid > div {
+        margin-bottom: 20px;
+    }
+
+    #how-it-works .grid-3 {
+        gap: 20px;
     }
 
     .hero-buttons {
