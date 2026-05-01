@@ -5,13 +5,25 @@
 
 import os
 
+# Check if running on Render (production)
+IS_PRODUCTION = os.environ.get("RENDER") is not None
 
-
-DB_HOST     = os.environ.get("DB_HOST", "edulink-db-oceaniccodderx.h.aivencloud.com")
-DB_PORT     = int(os.environ.get("DB_PORT", 24980))
-DB_USER     = os.environ.get("DB_USER", "avnadmin")
-DB_PASSWORD = os.environ.get("DB_PASSWORD") # Set this in Render Dashboard
-DB_NAME     = os.environ.get("DB_NAME", "defaultdb")
+if IS_PRODUCTION:
+    # Live Production Database (Aiven Cloud)
+    DB_HOST     = os.environ.get("DB_HOST", "edulink-db-oceaniccodderx.h.aivencloud.com")
+    DB_PORT     = int(os.environ.get("DB_PORT", 24980))
+    DB_USER     = os.environ.get("DB_USER", "avnadmin")
+    DB_PASSWORD = os.environ.get("DB_PASSWORD") # Set this in Render Dashboard
+    DB_NAME     = os.environ.get("DB_NAME", "defaultdb")
+    DB_SSL_DISABLED = False
+else:
+    # Local Development Database (XAMPP)
+    DB_HOST     = "localhost"
+    DB_PORT     = 3306
+    DB_USER     = "root"
+    DB_PASSWORD = ""
+    DB_NAME     = "edulink"
+    DB_SSL_DISABLED = True
 
 # --- Flask Config ---
 SECRET_KEY  = "edulink_secret_key_change_this_in_production"

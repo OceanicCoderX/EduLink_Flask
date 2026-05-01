@@ -4,7 +4,7 @@
 # ============================================================
 
 import mysql.connector
-from config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+from config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, DB_SSL_DISABLED
 
 
 def get_db_connection():
@@ -19,7 +19,7 @@ def get_db_connection():
         user=DB_USER,
         password=DB_PASSWORD,
         database=DB_NAME,
-        ssl_disabled=False,   # Aiven ke liye — SSL enable karo
+        ssl_disabled=DB_SSL_DISABLED,   # Local ke liye True, Aiven ke liye False
         use_pure=True
     )
     return mydb

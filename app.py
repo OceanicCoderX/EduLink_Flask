@@ -3,8 +3,17 @@
 # Updated: MAX_CONTENT_LENGTH for file uploads, Flask-Mail config
 # ============================================================
 
-from gevent import monkey
-monkey.patch_all()
+import os
+
+# Check if running on Render (production)
+IS_PRODUCTION = os.environ.get("RENDER") is not None
+
+if IS_PRODUCTION:
+    from gevent import monkey
+    monkey.patch_all()
+    ASYNC_MODE = 'gevent'
+else:
+    ASYNC_MODE = 'threading'
 
 from flask import Flask
 from flask_socketio import SocketIO
@@ -12,7 +21,6 @@ from config import (SECRET_KEY, MAX_CONTENT_LENGTH,
                     MAIL_SERVER, MAIL_PORT, MAIL_USE_TLS,
                     MAIL_USERNAME, MAIL_PASSWORD, MAIL_DEFAULT_SENDER,
                     UPLOAD_FOLDER)
-import os
 
 # --- App Initialize ---
 app = Flask(__name__)
@@ -31,7 +39,7 @@ app.config['MAIL_PASSWORD']       = MAIL_PASSWORD
 app.config['MAIL_DEFAULT_SENDER'] = MAIL_DEFAULT_SENDER
 
 # --- SocketIO Initialize (real-time chat ke liye) ---
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode=ASYNC_MODE)
 
 # --- Ensure upload directory exists ---
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
