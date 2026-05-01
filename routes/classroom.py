@@ -4,11 +4,13 @@
 #        close-room (admin), leave-room (member), notes
 # ============================================================
 
-from flask import Blueprint, render_template, request, session, redirect, url_for, jsonify
+from flask import Blueprint, render_template, request, session, redirect, url_for, jsonify, current_app
 from db import get_db_connection
 from datetime import date, datetime
 from functools import wraps
 from helpers.stacks import award_stack, log_activity
+import os
+from werkzeug.utils import secure_filename
 
 classroom_bp = Blueprint('classroom', __name__)
 
@@ -549,3 +551,227 @@ def get_room_notes(room_id):
     row = cursor.fetchone()
     cursor.close(); mydb.close()
     return jsonify({'notes': row[0] if row and row[0] else ''})
+
+
+# ── API: Upload Recording ─────────────────────────────────────
+
+@classroom_bp.route('/api/upload-recording', methods=['POST'])
+@login_required
+def upload_recording():
+    user_id = session['user_id']
+    room_id = request.form.get('room_id')
+    
+    if 'video' not in request.files:
+        return jsonify({'success': False, 'error': 'No video file uploaded'})
+        
+    file = request.files['video']
+    if file.filename == '':
+        return jsonify({'success': False, 'error': 'Empty filename'})
+        
+    mydb = get_db_connection()
+    cursor = mydb.cursor()
+    
+    # Verify user is admin
+    cursor.execute("SELECT admin_id FROM classroom WHERE room_id=%s", (room_id,))
+    row = cursor.fetchone()
+    if not row or row[0] != user_id:
+        cursor.close(); mydb.close()
+        return jsonify({'success': False, 'error': 'Only the admin can upload recordings'})
+
+    # Prepare directory
+    upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'recordings', f'room_{room_id}')
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Save file
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = secure_filename(f"rec_{timestamp}.webm")
+    file_path = os.path.join(upload_dir, filename)
+    
+    file.save(file_path)
+    
+    # Insert to DB
+    # We will compute a rough duration or just store 0 for now
+    db_file_path = f"static/uploads/recordings/room_{room_id}/{filename}"
+    
+    cursor.execute(
+        "INSERT INTO room_recordings (room_id, recorded_by, filename, file_path) VALUES (%s, %s, %s, %s)",
+        (room_id, user_id, filename, db_file_path)
+    )
+    mydb.commit()
+    cursor.close(); mydb.close()
+    
+    return jsonify({
+        'success': True, 
+        'message': 'Recording saved successfully',
+        'file_path': f"/{db_file_path}"
+    })
+
+
+# ── API: Get Room Recordings ──────────────────────────────────
+
+@classroom_bp.route('/api/get-room-recordings/<int:room_id>')
+@login_required
+def get_room_recordings(room_id):
+    user_id = session['user_id']
+    mydb = get_db_connection()
+    cursor = mydb.cursor(dictionary=True)
+    
+    # Check admin status
+    cursor.execute("SELECT admin_id FROM classroom WHERE room_id=%s", (room_id,))
+    room = cursor.fetchone()
+    if not room:
+        cursor.close(); mydb.close()
+        return jsonify([])
+        
+    is_admin = (room['admin_id'] == user_id)
+    
+    if is_admin:
+        # Admin sees all recordings
+        cursor.execute("""
+            SELECT r.*, u.profilename as recorded_by_name 
+            FROM room_recordings r
+            JOIN users u ON u.user_id = r.recorded_by
+            WHERE r.room_id=%s 
+            ORDER BY r.created_at DESC
+        """, (room_id,))
+    else:
+        # Members only see shared recordings
+        cursor.execute("""
+            SELECT r.*, u.profilename as recorded_by_name 
+            FROM room_recordings r
+            JOIN users u ON u.user_id = r.recorded_by
+            WHERE r.room_id=%s AND r.is_shared=1 
+            ORDER BY r.created_at DESC
+        """, (room_id,))
+        
+    recordings = cursor.fetchall()
+    
+    # Format dates
+    for rec in recordings:
+        if isinstance(rec['created_at'], datetime):
+            rec['created_at_fmt'] = rec['created_at'].strftime("%b %d, %Y %I:%M %p")
+        else:
+            rec['created_at_fmt'] = str(rec['created_at'])
+            
+        # Add forward slash for web path
+        rec['web_path'] = f"/{rec['file_path']}"
+            
+    cursor.close(); mydb.close()
+    return jsonify(recordings)
+
+
+# ── API: Get All Recordings ───────────────────────────────────
+
+@classroom_bp.route('/api/get-all-recordings')
+@login_required
+def get_all_recordings():
+    user_id = session['user_id']
+    mydb = get_db_connection()
+    cursor = mydb.cursor(dictionary=True)
+    
+    # 1. My recordings (recorded_by = user_id)
+    cursor.execute("""
+        SELECT r.*, c.room_name, u.profilename as recorded_by_name
+        FROM room_recordings r
+        JOIN classroom c ON c.room_id = r.room_id
+        JOIN users u ON u.user_id = r.recorded_by
+        WHERE r.recorded_by = %s
+        ORDER BY r.created_at DESC
+    """, (user_id,))
+    my_recordings = cursor.fetchall()
+    
+    # 2. Shared videos (is_shared=1 AND user is member of room)
+    cursor.execute("""
+        SELECT r.*, c.room_name, u.profilename as recorded_by_name
+        FROM room_recordings r
+        JOIN classroom c ON c.room_id = r.room_id
+        JOIN room_members rm ON rm.room_id = r.room_id
+        JOIN users u ON u.user_id = r.recorded_by
+        WHERE r.is_shared = 1 AND rm.member_id = %s
+        ORDER BY r.created_at DESC
+    """, (user_id,))
+    shared_recordings = cursor.fetchall()
+    
+    def format_recs(recs):
+        for rec in recs:
+            if isinstance(rec['created_at'], datetime):
+                rec['created_at_fmt'] = rec['created_at'].strftime("%b %d, %Y %I:%M %p")
+            else:
+                rec['created_at_fmt'] = str(rec['created_at'])
+            rec['web_path'] = f"/{rec['file_path']}"
+        return recs
+        
+    cursor.close(); mydb.close()
+    
+    return jsonify({
+        'my_recordings': format_recs(my_recordings),
+        'shared_recordings': format_recs(shared_recordings)
+    })
+
+
+
+# ── API: Toggle Share Recording ───────────────────────────────
+
+@classroom_bp.route('/api/toggle-share-recording', methods=['POST'])
+@login_required
+def toggle_share_recording():
+    user_id = session['user_id']
+    recording_id = request.form.get('recording_id')
+    is_shared = int(request.form.get('is_shared', 0))
+    
+    mydb = get_db_connection()
+    cursor = mydb.cursor()
+    
+    # Check ownership/admin
+    cursor.execute("""
+        SELECT r.room_id, c.admin_id 
+        FROM room_recordings r
+        JOIN classroom c ON c.room_id = r.room_id
+        WHERE r.recording_id=%s
+    """, (recording_id,))
+    row = cursor.fetchone()
+    
+    if not row or row[1] != user_id:
+        cursor.close(); mydb.close()
+        return jsonify({'success': False, 'error': 'Not authorized'})
+        
+    cursor.execute(
+        "UPDATE room_recordings SET is_shared=%s WHERE recording_id=%s",
+        (is_shared, recording_id)
+    )
+    mydb.commit()
+    cursor.close(); mydb.close()
+    
+    return jsonify({'success': True, 'is_shared': is_shared})
+
+
+# ── API: Delete Recording ─────────────────────────────────────
+
+@classroom_bp.route('/api/delete-recording', methods=['POST'])
+@login_required
+def delete_recording():
+    user_id = session['user_id']
+    recording_id = request.form.get('recording_id')
+    
+    mydb = get_db_connection()
+    cursor = mydb.cursor()
+    
+    cursor.execute("SELECT recorded_by, file_path FROM room_recordings WHERE recording_id=%s", (recording_id,))
+    row = cursor.fetchone()
+    
+    if not row or row[0] != user_id:
+        cursor.close(); mydb.close()
+        return jsonify({'success': False, 'error': 'Not authorized or not found'})
+        
+    try:
+        file_path = os.path.join(current_app.root_path, row[1].lstrip('/'))
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    except Exception as e:
+        print("Delete file error:", e)
+        
+    cursor.execute("DELETE FROM room_recordings WHERE recording_id=%s", (recording_id,))
+    mydb.commit()
+    cursor.close(); mydb.close()
+    
+    return jsonify({'success': True})

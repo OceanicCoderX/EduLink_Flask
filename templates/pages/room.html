@@ -317,6 +317,25 @@
 
 .sys-msg { text-align: center; font-size: 12px; color: var(--text-muted); padding: 4px; font-style: italic; }
 
+/* Videos panel */
+.videos-section { flex: 1; display: none; flex-direction: column; min-height: 0; background: var(--bg-secondary); }
+.videos-section.active { display: flex; }
+.video-tabs { display: flex; border-bottom: 1px solid var(--border-color); background: var(--bg-primary); }
+.v-tab { flex: 1; padding: 10px; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; transition: 0.2s; }
+.v-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.videos-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.video-item { background: var(--bg-primary); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--border-color); }
+.video-item-title { font-size: 13px; font-weight: 600; color: var(--text-primary); word-break: break-all;}
+.video-item-meta { font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between;}
+.video-actions { display: flex; gap: 8px; margin-top: 4px; }
+.v-btn { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; text-decoration: none;}
+.v-btn-play { background: var(--primary); color: white; display: flex; align-items: center; gap: 4px; }
+.v-btn-share { background: #2dce89; color: white; }
+.v-btn-unshare { background: var(--accent-3); color: white; }
+.btn-record { background: #f5494a; color: white; }
+.btn-record.recording { animation: pulseRecord 1.5s infinite; }
+@keyframes pulseRecord { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
 @media (max-width: 768px) {
     .room-main { grid-template-columns: 1fr; }
     .right-panel { height: 380px; }
@@ -393,12 +412,12 @@
                     </div>
                     <div class="main-cam-name">Camera Off</div>
                 </div>
-                <!-- Local video stream -->
-                <video id="localVideo" autoplay muted playsinline style="display:none;width:100%;height:100%;object-fit:cover;"></video>
+                <!-- Spotlight video stream -->
+                <video id="mainStageVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:cover;"></video>
                 <!-- Name label overlay -->
                 <div class="main-user-label">
-                    <i class="fas fa-microphone-slash" id="localMicIcon" style="color:#f5494a;"></i>
-                    {{ user.profilename }} (You)
+                    <i class="fas fa-microphone-slash" id="mainMicIcon" style="color:#f5494a;"></i>
+                    <span id="mainNameLabel">{{ user.profilename }} (You)</span>
                 </div>
                 <!-- Peer count badge -->
                 <div class="peer-count-badge" id="peerCountBadge">
@@ -460,6 +479,14 @@
                 <button class="video-btn btn-mic off" id="micBtn">
                     <i class="fas fa-microphone-slash"></i> Mic Off
                 </button>
+                <button class="video-btn btn-share off" id="shareScreenBtn">
+                    <i class="fas fa-desktop"></i> Share Screen
+                </button>
+                {% if is_admin %}
+                <button class="video-btn btn-record" id="recordBtn">
+                    <i class="fas fa-circle"></i> Record
+                </button>
+                {% endif %}
                 <button class="video-btn btn-leave" id="leaveBtn">
                     <i class="fas fa-phone-slash"></i>
                     {% if is_admin %}Close Room{% else %}Leave{% endif %}
@@ -475,6 +502,9 @@
                 </button>
                 <button class="panel-tab" id="tabNotes" onclick="switchTab('notes')">
                     <i class="fas fa-sticky-note"></i> Notes
+                </button>
+                <button class="panel-tab" id="tabVideos" onclick="switchTab('videos')">
+                    <i class="fas fa-video"></i> Videos
                 </button>
             </div>
 
@@ -527,6 +557,19 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Videos -->
+            <div class="videos-section" id="videosSection">
+                <div class="video-tabs">
+                    {% if is_admin %}
+                    <div class="v-tab active" onclick="switchVideoTab('my')" id="vTabMy">My Recordings</div>
+                    {% endif %}
+                    <div class="v-tab {% if not is_admin %}active{% endif %}" onclick="switchVideoTab('shared')" id="vTabShared">Shared Videos</div>
+                </div>
+                <div class="videos-list" id="videosList">
+                    <!-- populated via js -->
+                </div>
+            </div>
         </div>
 
     </div>
@@ -576,20 +619,26 @@ function sendSessionTime() {
 
 // ── Tab Switching ─────────────────────────────────────────────
 function switchTab(tab) {
-    const chatSection  = document.getElementById('chatSection');
-    const notesSection = document.getElementById('notesSection');
-    const tabChat      = document.getElementById('tabChat');
-    const tabNotes     = document.getElementById('tabNotes');
+    const chatSection   = document.getElementById('chatSection');
+    const notesSection  = document.getElementById('notesSection');
+    const videosSection = document.getElementById('videosSection');
+    const tabChat       = document.getElementById('tabChat');
+    const tabNotes      = document.getElementById('tabNotes');
+    const tabVideos     = document.getElementById('tabVideos');
+
+    chatSection.style.display  = 'none';
+    notesSection.classList.remove('active');
+    if (videosSection) videosSection.classList.remove('active');
+    
+    tabChat.classList.remove('active');
+    tabNotes.classList.remove('active');
+    if (tabVideos) tabVideos.classList.remove('active');
 
     if (tab === 'chat') {
         chatSection.style.display  = '';
-        notesSection.classList.remove('active');
         tabChat.classList.add('active');
-        tabNotes.classList.remove('active');
-    } else {
-        chatSection.style.display  = 'none';
+    } else if (tab === 'notes') {
         notesSection.classList.add('active');
-        tabChat.classList.remove('active');
         tabNotes.classList.add('active');
         // Load latest notes from server
         fetch(`/api/get-room-notes/${ROOM_ID}`)
@@ -598,6 +647,10 @@ function switchTab(tab) {
                 const ta = document.getElementById('roomNotesTextarea');
                 if (d.notes && !ta.value) ta.value = d.notes;
             });
+    } else if (tab === 'videos') {
+        if (videosSection) videosSection.classList.add('active');
+        if (tabVideos) tabVideos.classList.add('active');
+        loadRecordings();
     }
 }
 
@@ -765,14 +818,49 @@ let peerNames     = {};          // sid → display name
 let camOn         = false;
 let micOn         = false;
 
-const localVideo      = document.getElementById('localVideo');
+const mainStageVideo  = document.getElementById('mainStageVideo');
 const mainCamOff      = document.getElementById('mainCamOff');
+const mainAvatar      = document.getElementById('mainAvatar');
+const mainNameLabel   = document.getElementById('mainNameLabel');
+const mainMicIcon     = document.getElementById('mainMicIcon');
 const camBtn          = document.getElementById('camBtn');
 const micBtn          = document.getElementById('micBtn');
 const participStrip   = document.getElementById('participantsDrawer');
 const peerCountBadge  = document.getElementById('peerCountBadge');
 const peerCountNum    = document.getElementById('peerCountNum');
-const localMicIcon    = document.getElementById('localMicIcon');
+
+let currentSpotlight = { isLocal: true, sid: null, userId: MY_USER_ID, name: MY_NAME, stream: null };
+
+function setSpotlight(isLocal, sid, userId, name, stream, isCamOff, isMicOff) {
+    currentSpotlight = { isLocal, sid, userId, name, stream };
+    
+    if (mainNameLabel) mainNameLabel.textContent = isLocal ? name + " (You)" : name;
+    if (mainAvatar) mainAvatar.textContent = name ? name[0].toUpperCase() : '?';
+    
+    if (isCamOff) {
+        mainStageVideo.style.display = 'none';
+        mainCamOff.style.display = 'flex';
+    } else {
+        mainStageVideo.srcObject = stream;
+        mainStageVideo.style.display = 'block';
+        mainCamOff.style.display = 'none';
+        mainStageVideo.muted = isLocal;
+        mainStageVideo.play().catch(e => {});
+    }
+    
+    if (isMicOff) {
+        mainMicIcon.className = 'fas fa-microphone-slash';
+        mainMicIcon.style.color = '#f5494a';
+    } else {
+        mainMicIcon.className = 'fas fa-microphone';
+        mainMicIcon.style.color = '#2dce89';
+    }
+}
+
+// Ensure clicking local tile sets spotlight to local
+document.getElementById('tile_user_' + MY_USER_ID).addEventListener('click', () => {
+    setSpotlight(true, null, MY_USER_ID, MY_NAME, localStream, !camOn, !micOn);
+});
 
 let sidToUserId = {}; // sid -> userId (for quick lookup)
 
@@ -866,6 +954,10 @@ if (socket.connected) {
 
 // ── Camera Toggle ──────────────────────────────────────────────
 camBtn.addEventListener('click', async () => {
+    if (typeof isScreenSharing !== 'undefined' && isScreenSharing) {
+        showRoomToast("Cannot toggle camera while sharing screen", "red");
+        return;
+    }
     let needsRenegotiation = false;
     if (!localStream) {
         localStream = new MediaStream();
@@ -896,22 +988,23 @@ camBtn.addEventListener('click', async () => {
     }
 
     if (camOn) {
-        localVideo.srcObject = localStream;
-        localVideo.style.display = 'block';
-        mainCamOff.style.display = 'none';
         const drawerLocalVideo = document.getElementById('drawerLocalVideo');
         if (drawerLocalVideo) {
             drawerLocalVideo.srcObject = localStream;
             drawerLocalVideo.style.display = 'block';
             document.getElementById('tile_user_' + MY_USER_ID).classList.add('cam-active');
         }
+        if (currentSpotlight.isLocal) {
+            setSpotlight(true, null, MY_USER_ID, MY_NAME, localStream, !camOn, !micOn);
+        }
     } else {
-        localVideo.style.display = 'none';
-        mainCamOff.style.display = 'flex';
         const drawerLocalVideo = document.getElementById('drawerLocalVideo');
         if (drawerLocalVideo) {
             drawerLocalVideo.style.display = 'none';
             document.getElementById('tile_user_' + MY_USER_ID).classList.remove('cam-active');
+        }
+        if (currentSpotlight.isLocal) {
+            setSpotlight(true, null, MY_USER_ID, MY_NAME, localStream, !camOn, !micOn);
         }
     }
     camBtn.className = 'video-btn btn-cam' + (camOn ? '' : ' off');
@@ -977,6 +1070,10 @@ micBtn.addEventListener('click', async () => {
         drawerMicIcon.className = micOn ? 'fas fa-microphone peer-mic-icon' : 'fas fa-microphone-slash peer-mic-icon muted';
     }
     
+    if (currentSpotlight.isLocal) {
+        setSpotlight(true, null, MY_USER_ID, MY_NAME, localStream, !camOn, !micOn);
+    }
+    
     socket.emit('webrtc_media_state', { room_id: ROOM_ID, cam: camOn, mic: micOn });
     
     if (needsRenegotiation) {
@@ -1000,6 +1097,169 @@ micBtn.addEventListener('click', async () => {
         });
     }
 });
+
+// ── Screen Sharing Toggle ──────────────────────────────────────
+let screenStream = null;
+let isScreenSharing = false;
+let previousCamState = false;
+
+const shareScreenBtn = document.getElementById('shareScreenBtn');
+if (shareScreenBtn) {
+    shareScreenBtn.addEventListener('click', async () => {
+        if (!isScreenSharing) {
+            try {
+                screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                const screenTrack = screenStream.getVideoTracks()[0];
+                
+                screenTrack.onended = () => {
+                    stopScreenSharing();
+                };
+
+                if (!localStream) {
+                    localStream = new MediaStream();
+                }
+
+                const existingVTracks = localStream.getVideoTracks();
+                if (existingVTracks.length > 0) {
+                    localStream.removeTrack(existingVTracks[0]);
+                }
+
+                localStream.addTrack(screenTrack);
+
+                isScreenSharing = true;
+                shareScreenBtn.className = 'video-btn btn-share active';
+                shareScreenBtn.style.background = '#2dce89';
+                shareScreenBtn.style.color = 'white';
+                shareScreenBtn.innerHTML = '<i class="fas fa-times-circle"></i> Stop Share';
+
+                if (currentSpotlight.isLocal) {
+                    setSpotlight(true, null, MY_USER_ID, MY_NAME, localStream, false, !micOn);
+                }
+                
+                const drawerLocalVideo = document.getElementById('drawerLocalVideo');
+                if (drawerLocalVideo) {
+                    drawerLocalVideo.srcObject = localStream;
+                    drawerLocalVideo.style.display = 'block';
+                    document.getElementById('tile_user_' + MY_USER_ID).classList.add('cam-active');
+                }
+
+                previousCamState = camOn;
+                camOn = true; 
+
+                camBtn.className = 'video-btn btn-cam off';
+                camBtn.innerHTML = '<i class="fas fa-video-slash"></i> Cam Off';
+                camBtn.style.opacity = '0.5';
+                camBtn.style.pointerEvents = 'none';
+
+                socket.emit('webrtc_media_state', { room_id: ROOM_ID, cam: camOn, mic: micOn });
+                socket.emit('webrtc_spotlight', { room_id: ROOM_ID, user_id: MY_USER_ID });
+
+                Object.keys(peers).forEach(sid => {
+                    const pc = peers[sid];
+                    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (sender) {
+                        sender.replaceTrack(screenTrack).catch(e => console.warn(e));
+                    } else {
+                        pc.addTrack(screenTrack, localStream);
+                    }
+                });
+
+            } catch (err) {
+                console.error("Error starting screen share:", err);
+                if (err.name !== "NotAllowedError") {
+                    showRoomToast("Screen share failed: " + err.message, "red");
+                }
+            }
+        } else {
+            stopScreenSharing();
+        }
+    });
+}
+
+async function stopScreenSharing() {
+    if (!isScreenSharing) return;
+
+    if (screenStream) {
+        screenStream.getTracks().forEach(t => t.stop());
+        screenStream = null;
+    }
+
+    isScreenSharing = false;
+
+    shareScreenBtn.className = 'video-btn btn-share off';
+    shareScreenBtn.style.background = '';
+    shareScreenBtn.style.color = '';
+    shareScreenBtn.innerHTML = '<i class="fas fa-desktop"></i> Share Screen';
+
+    camBtn.style.opacity = '1';
+    camBtn.style.pointerEvents = 'auto';
+
+    const existingVTracks = localStream.getVideoTracks();
+    if (existingVTracks.length > 0) {
+        localStream.removeTrack(existingVTracks[0]);
+    }
+
+    if (previousCamState) {
+        try {
+            const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const vTrack = tempStream.getVideoTracks()[0];
+            localStream.addTrack(vTrack);
+            camOn = true;
+
+            camBtn.className = 'video-btn btn-cam';
+            camBtn.innerHTML = '<i class="fas fa-video"></i> Cam On';
+            if (currentSpotlight.isLocal) {
+                setSpotlight(true, null, MY_USER_ID, MY_NAME, localStream, false, !micOn);
+            }
+
+            const drawerLocalVideo = document.getElementById('drawerLocalVideo');
+            if (drawerLocalVideo) {
+                drawerLocalVideo.srcObject = localStream;
+            }
+
+            Object.keys(peers).forEach(sid => {
+                const pc = peers[sid];
+                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                if (sender) {
+                    sender.replaceTrack(vTrack).catch(e => console.warn(e));
+                }
+            });
+
+        } catch (err) {
+            console.error("Failed to restore camera:", err);
+            turnOffVideoCompletely();
+        }
+    } else {
+        turnOffVideoCompletely();
+    }
+}
+
+function turnOffVideoCompletely() {
+    camOn = false;
+    
+    if (currentSpotlight.isLocal) {
+        setSpotlight(true, null, MY_USER_ID, MY_NAME, localStream, true, !micOn);
+    }
+    
+    const drawerLocalVideo = document.getElementById('drawerLocalVideo');
+    if (drawerLocalVideo) {
+        drawerLocalVideo.style.display = 'none';
+        document.getElementById('tile_user_' + MY_USER_ID).classList.remove('cam-active');
+    }
+
+    camBtn.className = 'video-btn btn-cam off';
+    camBtn.innerHTML = '<i class="fas fa-video-slash"></i> Cam Off';
+
+    socket.emit('webrtc_media_state', { room_id: ROOM_ID, cam: false, mic: micOn });
+
+    Object.keys(peers).forEach(sid => {
+        const pc = peers[sid];
+        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) {
+            sender.replaceTrack(null).catch(e => console.warn(e));
+        }
+    });
+}
 
 function stopMedia() {
     if (localStream) {
@@ -1119,6 +1379,14 @@ socket.on('webrtc_media_state', ({ sid, user_id, cam, mic }) => {
     }
 });
 
+socket.on('webrtc_spotlight', ({ sid, user_id }) => {
+    const tileId = user_id ? 'tile_user_' + user_id : 'ptile_' + sid;
+    const tile = document.getElementById(tileId);
+    if (tile && tile.onclick) {
+        tile.onclick(); // Trigger the click handler to spotlight them
+    }
+});
+
 function createPC(sid, username, userId) {
     const pc = new RTCPeerConnection(iceConfig);
 
@@ -1158,6 +1426,26 @@ function createPC(sid, username, userId) {
                 if (avatarBox) avatarBox.style.display = 'flex';
             }
             tile.classList.toggle('cam-active', hasVideo);
+            
+            if (currentSpotlight.sid === sid) {
+                const aTracks = stream.getAudioTracks();
+                const hasAudio = aTracks.length > 0 && aTracks[0].enabled && aTracks[0].readyState === 'live' && !aTracks[0].muted;
+                setSpotlight(false, sid, userId, name, stream, !hasVideo, !hasAudio);
+            }
+        };
+        
+        tile.onclick = () => {
+            const aTracks = stream.getAudioTracks();
+            const hasAudio = aTracks.length > 0 && aTracks[0].enabled && aTracks[0].readyState === 'live' && !aTracks[0].muted;
+            
+            const vTracks = stream.getVideoTracks();
+            let hasVideo = false;
+            if (vTracks.length > 0) {
+                const vt = vTracks[0];
+                hasVideo = vt.enabled && vt.readyState === 'live' && !vt.muted;
+            }
+            
+            setSpotlight(false, sid, userId, name, stream, !hasVideo, !hasAudio);
         };
 
         vid.onloadedmetadata = () => {
@@ -1203,5 +1491,181 @@ function showRoomToast(msg, color) {
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 4000);
 }
+
+// ── Recording Logic ───────────────────────────────────────────
+let mediaRecorder;
+let recordedChunks = [];
+let isRecording = false;
+let currentVideoTab = IS_ADMIN ? 'my' : 'shared';
+
+function setupRecording() {
+    const recordBtn = document.getElementById('recordBtn');
+    if (!recordBtn) return;
+    
+    recordBtn.addEventListener('click', () => {
+        if (!isRecording) {
+            startRecording();
+        } else {
+            stopRecording();
+        }
+    });
+}
+
+function startRecording() {
+    if (!localStream || localStream.getTracks().length === 0) {
+        showRoomToast('Please turn on your camera or mic first to record', 'red');
+        return;
+    }
+    
+    recordedChunks = [];
+    
+    // Create a fresh stream to avoid track mutation issues with MediaRecorder
+    const recordStream = new MediaStream();
+    localStream.getTracks().forEach(t => recordStream.addTrack(t));
+
+    try {
+        mediaRecorder = new MediaRecorder(recordStream, { mimeType: 'video/webm; codecs=vp9' });
+    } catch (e) {
+        mediaRecorder = new MediaRecorder(recordStream); // fallback
+    }
+    
+    mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+    
+    mediaRecorder.onstop = uploadRecording;
+    mediaRecorder.start(1000); // chunk every 1s
+    isRecording = true;
+    
+    const recordBtn = document.getElementById('recordBtn');
+    recordBtn.classList.add('recording');
+    recordBtn.innerHTML = '<i class="fas fa-stop"></i> Stop';
+    showRoomToast('Recording started', 'green');
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+    }
+    isRecording = false;
+    const recordBtn = document.getElementById('recordBtn');
+    if(recordBtn) {
+        recordBtn.classList.remove('recording');
+        recordBtn.innerHTML = '<i class="fas fa-circle"></i> Record';
+    }
+}
+
+function uploadRecording() {
+    showRoomToast('Saving recording...', 'var(--primary)');
+    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+    const fd = new FormData();
+    fd.append('room_id', ROOM_ID);
+    fd.append('video', blob, 'recording.webm');
+    
+    fetch('/api/upload-recording', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showRoomToast('Recording saved to server!', 'green');
+                loadRecordings();
+            } else {
+                showRoomToast('Error saving recording: ' + data.error, 'red');
+            }
+        }).catch(err => {
+            console.error('Upload failed', err);
+            showRoomToast('Upload failed', 'red');
+        });
+}
+
+function switchVideoTab(tab) {
+    currentVideoTab = tab;
+    document.querySelectorAll('.v-tab').forEach(t => t.classList.remove('active'));
+    if (tab === 'my' && document.getElementById('vTabMy')) document.getElementById('vTabMy').classList.add('active');
+    if (tab === 'shared' && document.getElementById('vTabShared')) document.getElementById('vTabShared').classList.add('active');
+    loadRecordings();
+}
+
+function loadRecordings() {
+    fetch(`/api/get-room-recordings/${ROOM_ID}`)
+        .then(r => r.json())
+        .then(list => {
+            const container = document.getElementById('videosList');
+            if (!container) return;
+            
+            let filtered = list;
+            if (IS_ADMIN) {
+                if (currentVideoTab === 'my') {
+                    filtered = list.filter(r => r.recorded_by === MY_USER_ID);
+                } else {
+                    filtered = list.filter(r => r.is_shared === 1);
+                }
+            } else {
+                filtered = list;
+            }
+            
+            if (filtered.length === 0) {
+                container.innerHTML = `<div style="text-align:center;padding:20px;font-size:12px;color:var(--text-muted);">No videos found</div>`;
+                return;
+            }
+            
+            container.innerHTML = filtered.map(r => `
+                <div class="video-item">
+                    <div class="video-item-title">${r.filename}</div>
+                    <div class="video-item-meta">
+                        <span><i class="fas fa-clock"></i> ${r.created_at_fmt}</span>
+                        ${r.is_shared ? '<span style="color:#2dce89"><i class="fas fa-check-circle"></i> Shared</span>' : '<span style="color:#f5494a"><i class="fas fa-lock"></i> Private</span>'}
+                    </div>
+                    <div class="video-actions">
+                        <a href="${r.web_path}" target="_blank" class="v-btn v-btn-play"><i class="fas fa-play"></i> Watch</a>
+                        ${IS_ADMIN && currentVideoTab === 'my' ? 
+                            `<button class="v-btn ${r.is_shared ? 'v-btn-unshare' : 'v-btn-share'}" onclick="toggleShare(${r.recording_id}, ${r.is_shared ? 0 : 1})">
+                                ${r.is_shared ? '<i class="fas fa-times"></i> Unshare' : '<i class="fas fa-share"></i> Share to Room'}
+                            </button>
+                            <button class="v-btn v-btn-unshare" style="background:#f5494a;" onclick="deleteRecording(${r.recording_id})">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>` : ''
+                        }
+                    </div>
+                </div>
+            `).join('');
+        });
+}
+
+function toggleShare(recId, isShared) {
+    const fd = new FormData();
+    fd.append('recording_id', recId);
+    fd.append('is_shared', isShared);
+    
+    fetch('/api/toggle-share-recording', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                loadRecordings();
+                showRoomToast(isShared ? 'Video shared with room' : 'Video is now private', 'green');
+            }
+        });
+}
+
+function deleteRecording(recId) {
+    if (!confirm("Are you sure you want to delete this recording? This action cannot be undone.")) {
+        return;
+    }
+    
+    const fd = new FormData();
+    fd.append('recording_id', recId);
+    
+    fetch('/api/delete-recording', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                loadRecordings();
+                showRoomToast('Recording deleted successfully', 'green');
+            } else {
+                showRoomToast('Failed to delete recording', 'red');
+            }
+        });
+}
+
+setupRecording();
 </script>
 {% endblock %}

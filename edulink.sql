@@ -157,38 +157,20 @@ CREATE TABLE `note_categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ============================================================
--- TABLE: posts
+-- TABLE: room_recordings
 -- ============================================================
 
-CREATE TABLE `posts` (
-  `post_id`    int(11)     NOT NULL PRIMARY KEY AUTO_INCREMENT,
-  `user_id`    int(11)     NOT NULL,
-  `content`    text        NOT NULL,
-  `subject`    varchar(30) NOT NULL DEFAULT 'general',
-  `created_at` datetime    NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- ============================================================
--- TABLE: post_comments
--- ============================================================
-
-CREATE TABLE `post_comments` (
-  `comment_id` int(11)  NOT NULL PRIMARY KEY AUTO_INCREMENT,
-  `post_id`    int(11)  NOT NULL,
-  `user_id`    int(11)  NOT NULL,
-  `comment`    text     NOT NULL,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- ============================================================
--- TABLE: post_likes
--- ============================================================
-
-CREATE TABLE `post_likes` (
-  `like_id` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
-  `post_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  UNIQUE KEY `unique_like` (`post_id`, `user_id`)
+CREATE TABLE `room_recordings` (
+  `recording_id`    int(11)      NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `room_id`         int(11)      NOT NULL,
+  `recorded_by`     int(11)      NOT NULL,
+  `filename`        varchar(255) NOT NULL,
+  `file_path`       varchar(500) NOT NULL,
+  `duration_secs`   int(11)      DEFAULT 0,
+  `is_shared`       tinyint(1)   DEFAULT 0,
+  `created_at`      timestamp    DEFAULT current_timestamp(),
+  FOREIGN KEY (`room_id`)     REFERENCES `classroom`(`room_id`) ON DELETE CASCADE,
+  FOREIGN KEY (`recorded_by`) REFERENCES `users`(`user_id`)     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ============================================================

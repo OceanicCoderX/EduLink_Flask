@@ -411,6 +411,18 @@ def init_socket_events(socketio):
             'mic': mic
         }, to=room_key, include_self=False)
 
+    @socketio.on('webrtc_spotlight')
+    def handle_webrtc_spotlight(data):
+        """Relay spotlight request to all peers (e.g. when screen sharing starts)."""
+        room_id = str(data.get('room_id'))
+        room_key = f"classroom_{room_id}"
+        user_id = data.get('user_id')
+        
+        emit('webrtc_spotlight', {
+            'sid': request.sid,
+            'user_id': user_id
+        }, to=room_key, include_self=False)
+
 
     @socketio.on('disconnect')
     def handle_disconnect():

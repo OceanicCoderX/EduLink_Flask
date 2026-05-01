@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadStats();
     loadMyRooms();
     loadJoinedRooms();
+    loadGlobalRecordings();
     initListeners();
 });
 
@@ -368,4 +369,117 @@ function showToast(msg, type) {
     t.textContent = msg;
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 3500);
+}
+
+// ── Global Videos ─────────────────────────────────────────────
+
+let currentGlobalVideoTab = 'my';
+let allGlobalRecordings = { my_recordings: [], shared_recordings: [] };
+
+function switchGlobalVideoTab(tab) {
+    currentGlobalVideoTab = tab;
+    document.getElementById('gvTabMy').style.color = 'var(--text-muted)';
+    document.getElementById('gvTabMy').style.borderBottomColor = 'transparent';
+    document.getElementById('gvTabShared').style.color = 'var(--text-muted)';
+    document.getElementById('gvTabShared').style.borderBottomColor = 'transparent';
+    
+    if (tab === 'my') {
+        document.getElementById('gvTabMy').style.color = 'var(--primary)';
+        document.getElementById('gvTabMy').style.borderBottomColor = 'var(--primary)';
+    } else {
+        document.getElementById('gvTabShared').style.color = 'var(--primary)';
+        document.getElementById('gvTabShared').style.borderBottomColor = 'var(--primary)';
+    }
+    renderGlobalRecordings();
+}
+
+function loadGlobalRecordings() {
+    fetch('/api/get-all-recordings')
+        .then(r => r.json())
+        .then(data => {
+            allGlobalRecordings = data;
+            renderGlobalRecordings();
+        })
+        .catch(err => {
+            console.error('get-all-recordings error:', err);
+            const container = document.getElementById('globalVideosList');
+            if(container) container.innerHTML = `<div style="text-align:center;padding:20px;font-size:12px;color:#f5494a;">Failed to load videos</div>`;
+        });
+}
+
+function renderGlobalRecordings() {
+    const container = document.getElementById('globalVideosList');
+    if (!container) return;
+    
+    const list = currentGlobalVideoTab === 'my' ? allGlobalRecordings.my_recordings : allGlobalRecordings.shared_recordings;
+    
+    if (!list || list.length === 0) {
+        container.innerHTML = `<div style="text-align:center;padding:20px;font-size:13px;color:var(--text-muted);">No videos found in this tab.</div>`;
+        return;
+    }
+    
+    container.innerHTML = list.map(r => `
+        <div class="video-item" style="background:var(--bg-primary); border-radius:8px; padding:12px; display:flex; flex-direction:column; gap:8px; border:1px solid var(--border-color);">
+            <div style="font-size:14px; font-weight:600; color:var(--text-primary); word-break:break-all;">${r.filename}</div>
+            <div style="font-size:12px; color:var(--text-muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px;">
+                <span><i class="fas fa-door-open"></i> ${r.room_name}</span>
+                <span><i class="fas fa-clock"></i> ${r.created_at_fmt}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                <div style="font-size:12px;">
+                    ${r.is_shared 
+                        ? '<span style="color:#2dce89"><i class="fas fa-check-circle"></i> Shared</span>' 
+                        : '<span style="color:#f5494a"><i class="fas fa-lock"></i> Private</span>'}
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <a href="${r.web_path}" target="_blank" style="background:var(--primary); color:white; padding:5px 12px; border-radius:6px; font-size:12px; font-weight:600; text-decoration:none; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-play"></i> Watch
+                    </a>
+                    ${currentGlobalVideoTab === 'my' ? 
+                        `<button style="background:${r.is_shared ? 'var(--accent-3)' : '#2dce89'}; color:white; padding:5px 12px; border:none; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;" onclick="toggleGlobalShare(${r.recording_id}, ${r.is_shared ? 0 : 1})">
+                            ${r.is_shared ? '<i class="fas fa-times"></i> Unshare' : '<i class="fas fa-share"></i> Share'}
+                        </button>
+                        <button style="background:#f5494a; color:white; padding:5px 12px; border:none; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;" onclick="deleteGlobalRecording(${r.recording_id})">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>` : ''
+                    }
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function toggleGlobalShare(recId, isShared) {
+    const fd = new FormData();
+    fd.append('recording_id', recId);
+    fd.append('is_shared', isShared);
+    
+    fetch('/api/toggle-share-recording', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                loadGlobalRecordings();
+                showToast(isShared ? 'Video shared successfully' : 'Video is now private', 'success');
+            }
+        });
+}
+
+function deleteGlobalRecording(recId) {
+    if (!confirm("Are you sure you want to delete this recording? This action cannot be undone.")) {
+        return;
+    }
+    
+    const fd = new FormData();
+    fd.append('recording_id', recId);
+    
+    fetch('/api/delete-recording', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                loadGlobalRecordings();
+                showToast('Recording deleted successfully', 'success');
+            } else {
+                showToast('Failed to delete recording', 'error');
+            }
+        });
 }
