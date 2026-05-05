@@ -115,6 +115,20 @@
     <!-- Common JS (theme, toast, avatar, activity tracker) -->
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+
+    <!-- Time Tracker -->
+    <script>
+        // Track active time spent on the website
+        setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                fetch('/api/track-time', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                }).catch(err => console.error('Error tracking time:', err));
+            }
+        }, 60000); // Ping every 60 seconds
+    </script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -308,6 +308,21 @@ INSERT INTO `activity_log` (`log_id`, `user_id`, `action_type`, `action_desc`, `
 (1, 1, 'focus', '+1 Stack — Focus Session', '2026-02-16 22:49:10');
 
 -- ============================================================
+-- TABLE: daily_time_spent
+-- Tracks total minutes a user spends actively on the website per day.
+-- Updated every 60 seconds via /api/track-time endpoint.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS `daily_time_spent` (
+  `id`            int(11) NOT NULL AUTO_INCREMENT ,
+  `user_id`       int(11) NOT NULL,
+  `date`          date    NOT NULL,
+  `total_minutes` int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_user_date` (`user_id`, `date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ============================================================
 -- RESET AUTO_INCREMENT COUNTERS (Optional but clean)
 -- ============================================================
 
@@ -319,6 +334,8 @@ ALTER TABLE `tasks` AUTO_INCREMENT = 12;
 ALTER TABLE `users` AUTO_INCREMENT = 11;
 ALTER TABLE `stack_history` AUTO_INCREMENT = 2;
 ALTER TABLE `activity_log` AUTO_INCREMENT = 2;
+
+ALTER TABLE `daily_time_spent` AUTO_INCREMENT = 1;
 
 COMMIT;
 

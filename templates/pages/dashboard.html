@@ -7,9 +7,20 @@
 {% block content %}
 <main class="main-content">
     <!-- Welcome Section -->
-    <div class="welcome-section">
-        <h1 class="welcome-title">Welcome back, <span id="userName">{{ user.profilename or 'User' }}</span>! 👋</h1>
-        <p class="welcome-subtitle">Here's your learning progress overview</p>
+    <div class="welcome-section" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div>
+            <h1 class="welcome-title">Welcome back, <span id="userName">{{ user.profilename or 'User' }}</span>! 👋</h1>
+            <p class="welcome-subtitle">Here's your learning progress overview</p>
+        </div>
+        <div class="report-actions" style="display: flex; gap: 10px; align-items: center;">
+            <select id="reportTimeframe" class="filter-btn" style="padding: 8px 14px; outline: none;">
+                <option value="weekly">Weekly Report</option>
+                <option value="monthly">Monthly Report</option>
+            </select>
+            <button id="downloadReportBtn" style="padding: 8px 16px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);">
+                <i class="fas fa-download"></i> Download Report
+            </button>
+        </div>
     </div>
 
     <!-- Stats Cards (live DB se aayengi) -->
@@ -65,6 +76,29 @@
         </a>
     </div>
 
+    <!-- Charts Section -->
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h3 class="chart-title">Working of Each Page</h3>
+            <div class="chart-container">
+                <canvas id="activityPieChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3 class="chart-title" id="lineChartTitle">Website Time Spent (Daily)</h3>
+                <div class="chart-filter">
+                    <button class="filter-btn active" data-range="daily">Daily</button>
+                    <button class="filter-btn" data-range="weekly">Weekly</button>
+                    <button class="filter-btn" data-range="monthly">Monthly</button>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="progressLineChart"></canvas>
+            </div>
+        </div>
+    </div>
+
     <!-- Activity Section — recent tasks + notes from DB -->
     <div class="activity-grid">
         <div class="activity-card">
@@ -87,9 +121,61 @@
             </div>
         </div>
     </div>
+
+    <!-- Hidden PDF Report Template -->
+    <div id="pdfReportTemplate" style="position: absolute; width: 800px; left: 0; top: 0; z-index: -9999; padding: 40px; background: white; color: #333; font-family: 'Inter', sans-serif;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #5e72e4; margin-bottom: 10px;">EduLink Progress Report</h1>
+            <h3 id="pdfReportRange" style="color: #8898aa; font-weight: normal;">Weekly Report</h3>
+            <p style="color: #8898aa; font-size: 14px;">User: {{ user.profilename or 'User' }}</p>
+        </div>
+
+        <!-- Dashboard Screenshot -->
+        <div style="margin-bottom: 30px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <img id="dashboardSnapshot" style="width: 100%; display: none;" alt="Dashboard Snapshot">
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-bottom: 30px; padding: 20px; background: #f8f9fe; border-radius: 12px;">
+            <div style="text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #5e72e4;" id="pdfFocusMins">0</div>
+                <div style="font-size: 14px; color: #8898aa;">Focus Minutes</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #2dce89;" id="pdfTasksCount">0</div>
+                <div style="font-size: 14px; color: #8898aa;">Tasks Completed</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #fb6340;" id="pdfNotesCount">0</div>
+                <div style="font-size: 14px; color: #8898aa;">Notes Created</div>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <h4 style="border-bottom: 2px solid #e9ecef; padding-bottom: 8px; margin-bottom: 12px; color: #32325d;">Completed Tasks</h4>
+            <ul id="pdfTasksList" style="list-style: none; padding-left: 0; font-size: 14px;"></ul>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <h4 style="border-bottom: 2px solid #e9ecef; padding-bottom: 8px; margin-bottom: 12px; color: #32325d;">Created Notes</h4>
+            <ul id="pdfNotesList" style="list-style: none; padding-left: 0; font-size: 14px;"></ul>
+        </div>
+
+        <div style="display: flex; gap: 20px;">
+            <div style="flex: 1;">
+                <h4 style="border-bottom: 2px solid #e9ecef; padding-bottom: 8px; margin-bottom: 12px; color: #32325d;">Classrooms Joined</h4>
+                <ul id="pdfClassroomsList" style="list-style: none; padding-left: 0; font-size: 14px;"></ul>
+            </div>
+            <div style="flex: 1;">
+                <h4 style="border-bottom: 2px solid #e9ecef; padding-bottom: 8px; margin-bottom: 12px; color: #32325d;">Communities Joined</h4>
+                <ul id="pdfCommunitiesList" style="list-style: none; padding-left: 0; font-size: 14px;"></ul>
+            </div>
+        </div>
+    </div>
 </main>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}
