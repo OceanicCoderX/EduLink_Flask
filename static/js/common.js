@@ -11,6 +11,8 @@
 // initializeTheme() already handled by script.js
 
 
+/* Mobile menu is handled by script.js (initializeEventListeners) */
+
 /* ── Toast System ────────────────────────────────────────── */
 
 function ensureToastContainer() {
@@ -32,14 +34,14 @@ function ensureToastContainer() {
 function showToast(message, type = 'info', duration = 3500) {
     const icons = {
         success: 'fa-check-circle',
-        error:   'fa-exclamation-circle',
-        info:    'fa-info-circle',
-        stack:   'fa-layer-group',
+        error: 'fa-exclamation-circle',
+        info: 'fa-info-circle',
+        stack: 'fa-layer-group',
         warning: 'fa-exclamation-triangle'
     };
 
     const container = ensureToastContainer();
-    const toast     = document.createElement('div');
+    const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.innerHTML = `
         <i class="fas ${icons[type] || 'fa-bell'} toast-icon"></i>
@@ -94,11 +96,11 @@ function updateStackDisplay(newTotal) {
 /* ── Profession Badge Helper ─────────────────────────────── */
 
 const PROFESSION_ICONS = {
-    'Student':      '📚',
-    'Teacher':      '🎓',
-    'Individual':   '👤',
+    'Student': '📚',
+    'Teacher': '🎓',
+    'Individual': '👤',
     'Professional': '💼',
-    'Other':        '⭐'
+    'Other': '⭐'
 };
 
 /**
@@ -106,11 +108,11 @@ const PROFESSION_ICONS = {
  */
 function getProfessionClass(profession) {
     const map = {
-        'Student':      'badge-student',
-        'Teacher':      'badge-teacher',
-        'Individual':   'badge-individual',
+        'Student': 'badge-student',
+        'Teacher': 'badge-teacher',
+        'Individual': 'badge-individual',
         'Professional': 'badge-professional',
-        'Other':        'badge-other'
+        'Other': 'badge-other'
     };
     return map[profession] || 'badge-other';
 }
@@ -120,7 +122,7 @@ function getProfessionClass(profession) {
  */
 function renderProfessionBadge(profession) {
     if (!profession) return '';
-    const cls  = getProfessionClass(profession);
+    const cls = getProfessionClass(profession);
     const icon = PROFESSION_ICONS[profession] || '⭐';
     return `<span class="profession-badge ${cls}">${icon} ${profession}</span>`;
 }
@@ -155,7 +157,7 @@ function renderAvatarHtml(avatarId, initials, profilePicUrl) {
 }
 
 function renderFallbackAvatar(avatarId, initials) {
-    const id    = avatarId || 1;
+    const id = avatarId || 1;
     const emoji = AVATAR_EMOJIS[id] || '';
     const label = emoji || (initials || 'U').charAt(0).toUpperCase();
     return `<div class="svg-avatar avatar-${id}">${label}</div>`;
@@ -183,7 +185,7 @@ function startActivityTracker() {
 
     _activityTimer = setInterval(async () => {
         try {
-            const res  = await fetch('/api/award-focus-interval', { method: 'POST' });
+            const res = await fetch('/api/award-focus-interval', { method: 'POST' });
             const data = await res.json();
             if (data.success) {
                 updateStackDisplay(data.new_total);
@@ -232,7 +234,7 @@ function closeModal(modalId) {
 }
 
 // Close modal when clicking overlay background
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     if (e.target.classList.contains('modal-overlay')) {
         e.target.classList.remove('active');
     }
@@ -241,15 +243,15 @@ document.addEventListener('click', function(e) {
 
 /* ── Initialization ──────────────────────────────────────── */
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     setMobileNavActive();
     startActivityTracker();
 
     // Apply avatar to main avatar elements if data attributes exist
     document.querySelectorAll('[data-avatar-id]').forEach(el => {
-        const id       = parseInt(el.dataset.avatarId) || 1;
+        const id = parseInt(el.dataset.avatarId) || 1;
         const initials = el.dataset.initials || 'U';
-        const url      = el.dataset.avatarUrl || '';
+        const url = el.dataset.avatarUrl || '';
         applyAvatar(el, id, initials, url);
     });
 });

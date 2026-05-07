@@ -4,6 +4,10 @@ let currentNoteId = null;
 let currentCategory = 'all';
 let categories = []; // {cat_id, name, color}
 
+
+/* Mobile menu handled by script.js */
+
+
 // helper functions for storage/back-end sync
 function loadNotesFromLocal() {
     const saved = localStorage.getItem('edulink_notes');
@@ -158,8 +162,8 @@ function renderCategoryFilters() {
     const bar = document.getElementById('catFilterBar');
     if (!bar) return;
     // Remove old dynamic buttons (keep first "All" and last "Manage" button)
-    const allBtn  = bar.querySelector('[data-cat="all"]');
-    const mngBtn  = bar.querySelector('.cat-manage-btn');
+    const allBtn = bar.querySelector('[data-cat="all"]');
+    const mngBtn = bar.querySelector('.cat-manage-btn');
     bar.innerHTML = '';
     bar.appendChild(allBtn);
 
@@ -215,7 +219,7 @@ function closeManageCategoriesModal() {
     document.getElementById('newCatError').style.display = 'none';
 }
 
-document.getElementById('manageCatModal').addEventListener('click', function(e) {
+document.getElementById('manageCatModal').addEventListener('click', function (e) {
     if (e.target === this) closeManageCategoriesModal();
 });
 
@@ -238,10 +242,10 @@ function renderCatManageList() {
 }
 
 function addCategory() {
-    const nameInput  = document.getElementById('newCatName');
+    const nameInput = document.getElementById('newCatName');
     const colorInput = document.getElementById('newCatColor');
-    const errEl      = document.getElementById('newCatError');
-    const name  = nameInput.value.trim();
+    const errEl = document.getElementById('newCatError');
+    const name = nameInput.value.trim();
     const color = colorInput.value || '#5e72e4';
 
     errEl.style.display = 'none';
@@ -422,10 +426,10 @@ function manualSaveNote() {
     const note = notes.find(n => n.id === currentNoteId);
     if (!note) return;
 
-    note.title    = document.getElementById('noteTitleInput') ? document.getElementById('noteTitleInput').value || 'Untitled Note' : 'Untitled Note';
-    note.content  = document.getElementById('noteContent') ? document.getElementById('noteContent').innerHTML : '';
+    note.title = document.getElementById('noteTitleInput') ? document.getElementById('noteTitleInput').value || 'Untitled Note' : 'Untitled Note';
+    note.content = document.getElementById('noteContent') ? document.getElementById('noteContent').innerHTML : '';
     note.category = document.getElementById('noteCategorySelect') ? document.getElementById('noteCategorySelect').value : 'General';
-    note.tags     = document.getElementById('tagsInput') ? document.getElementById('tagsInput').value.split(',').map(t => t.trim()).filter(t => t) : [];
+    note.tags = document.getElementById('tagsInput') ? document.getElementById('tagsInput').value.split(',').map(t => t.trim()).filter(t => t) : [];
     note.updatedAt = new Date().toISOString();
 
     saveNotesToLocal();

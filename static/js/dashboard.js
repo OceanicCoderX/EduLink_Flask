@@ -2,6 +2,9 @@
 const lightThemeBtn = document.getElementById('lightThemeBtn');
 const darkThemeBtn = document.getElementById('darkThemeBtn');
 
+// Mobile menu handled by script.js
+
+
 if (lightThemeBtn && darkThemeBtn) {
     lightThemeBtn.addEventListener('click', () => {
         document.documentElement.setAttribute('data-theme', 'light');
@@ -118,8 +121,9 @@ function loadDashboardStats() {
                                     position: 'bottom',
                                     labels: {
                                         color: '#8898aa',
-                                        padding: 20,
-                                        font: { family: "'Inter', sans-serif", size: 12 }
+                                        padding: 12,
+                                        boxWidth: 12,
+                                        font: { family: "'Inter', sans-serif", size: 10 }
                                     }
                                 }
                             },
@@ -286,16 +290,16 @@ if (downloadReportBtn) {
                     clone.id = 'pdfReportTemplateClone';
                     clone.style.display = 'block';
                     clone.style.position = 'absolute';
-                    clone.style.left = '0';
+                    clone.style.left = '-9999px'; // Move it off-screen instead of using zIndex: -1
                     clone.style.top = '0';
-                    clone.style.zIndex = '-1';
+                    clone.style.zIndex = '9999';
                     document.body.appendChild(clone);
 
                     const opt = {
                         margin: 0.5,
                         filename: `EduLink_${timeframe}_report.pdf`,
                         image: { type: 'jpeg', quality: 1 },
-                        html2canvas: { scale: 2, useCORS: true, logging: true, windowWidth: 800 },
+                        html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 800 },
                         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
                     };
 
@@ -317,9 +321,12 @@ if (downloadReportBtn) {
                     html2canvas(chartsContainer, { scale: 2, useCORS: true }).then(canvas => {
                         const imgData = canvas.toDataURL('image/jpeg', 1.0);
                         const snapImg = document.getElementById('dashboardSnapshot');
+                        snapImg.onload = () => {
+                            // Wait for image to fully load before generating PDF
+                            setTimeout(generatePdf, 100);
+                        };
                         snapImg.src = imgData;
                         snapImg.style.display = 'block';
-                        generatePdf();
                     }).catch(err => {
                         console.error("Screenshot error:", err);
                         generatePdf();

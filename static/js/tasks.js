@@ -31,7 +31,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const exportExcelBtn = document.getElementById('exportExcelBtn');
     const filterBtn = document.getElementById('filterBtn');
     const filterDropdown = document.getElementById('filterDropdown');
-
     // Optional elements (header se aate hain — null safe)
     const lightThemeBtn = document.getElementById('lightThemeBtn');
     const darkThemeBtn = document.getElementById('darkThemeBtn');
@@ -40,8 +39,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const pomodoroToggle = document.getElementById('pomodoroToggle');
     const timeEstimateInputs = document.getElementById('timeEstimateInputs');
     const exportPdfBtn = document.getElementById('exportPdfBtn');
+    // Mobile menu handled by script.js
 
-    // ── Init ──────────────────────────────────────────────────
     if (typeof loadUserProfile === 'function') loadUserProfile();
     if (typeof initializeTheme === 'function') initializeTheme();
     updateCurrentDate();

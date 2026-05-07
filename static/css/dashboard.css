@@ -456,6 +456,16 @@
             .welcome-title {
                 font-size: 24px;
             }
+
+            .chart-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            
+            .chart-container {
+                height: 280px; /* Restored height to prevent squishing pie/line charts */
+            }
         }
 
         /* === MOBILE BOTTOM NAV === */
@@ -497,13 +507,64 @@
             font-size: 20px;
         }
 
+        @media (max-width: 968px) {
+            .main-content {
+                margin-left: 0 !important;
+                padding: 20px 16px 90px 16px;
+            }
+
+            .bottom-nav {
+                display: block;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 14px;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .welcome-section {
+                margin-top: 12px;
+            }
+
+            .welcome-title {
+                font-size: 24px;
+            }
+
+            .chart-container {
+                height: 280px;
+            }
+        }
+
         @media (max-width: 768px) {
             .bottom-nav {
                 display: block;
             }
 
             .main-content {
-                padding-bottom: 80px;
+                padding-bottom: 85px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .stat-card {
+                padding: 16px;
+            }
+
+            .chart-container {
+                height: 280px; /* Force minimum height for charts so they aren't squished */
             }
         }
         .profile-card {

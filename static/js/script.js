@@ -13,6 +13,37 @@
 ========================================================= */
 
 
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+
+function initializeEventListeners() {
+    // Mobile Menu
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', () => {
+            const sb = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (sb) {
+                sb.classList.toggle('open');
+                // Show/hide overlay
+                if (overlay) {
+                    overlay.style.display = sb.classList.contains('open') ? 'block' : 'none';
+                }
+            }
+        });
+    }
+
+    // Close sidebar when clicking outside
+    document.addEventListener('click', (e) => {
+        const sidebarEl = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (window.innerWidth <= 968 && sidebarEl && mobileMenuBtn) {
+            if (!sidebarEl.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+                sidebarEl.classList.remove('open');
+                if (overlay) overlay.style.display = 'none';
+            }
+        }
+    });
+}
+
 /* =========================================================
    GLOBAL STATE
 ========================================================= */
@@ -223,6 +254,7 @@ function closeModal(modalId) {
 
 document.addEventListener('DOMContentLoaded', function () {
     initializeTheme();
+    initializeEventListeners();
     setupProfileForm();
     renderTasks();
     updateCalendarTitle();

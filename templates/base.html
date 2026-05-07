@@ -21,11 +21,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <!-- Main CSS -->
+    <!-- Main CSS (includes common styles: badges, toasts, avatars, etc.) -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-
-    <!-- Common CSS (badges, toasts, avatars, etc.) -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
 
     <!-- Page-specific CSS -->
     {% block extra_css %}{% endblock %}
@@ -36,6 +33,9 @@
         <button class="mobile-menu-btn" id="mobileMenuBtn">
             <i class="fas fa-bars"></i>
         </button>
+
+        <!-- Sidebar Overlay (shown when sidebar is open on mobile) -->
+        <div class="sidebar-overlay" id="sidebarOverlay" style="display:none;" onclick="document.getElementById('sidebar').classList.remove('open'); this.style.display='none';"></div>
 
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
@@ -104,6 +104,8 @@
                 <a href="{{ url_for('focus.focus') }}" class="mobile-nav-item"><i class="fas fa-clock"></i><span>Focus</span></a>
                 <a href="{{ url_for('tasks.tasks') }}" class="mobile-nav-item"><i class="fas fa-tasks"></i><span>Tasks</span></a>
                 <a href="{{ url_for('notebook.notebook') }}" class="mobile-nav-item"><i class="fas fa-book"></i><span>Notes</span></a>
+                <a href="{{ url_for('classroom.classroom') }}" class="mobile-nav-item"><i class="fas fa-users"></i><span>ClassRoom</span></a>
+                <a href="{{ url_for('community.community') }}" class="mobile-nav-item"><i class="fas fa-user-friends"></i><span>Community</span></a>
                 <a href="{{ url_for('profile.profile') }}" class="mobile-nav-item"><i class="fas fa-user"></i><span>Profile</span></a>
             </div>
         </nav>
