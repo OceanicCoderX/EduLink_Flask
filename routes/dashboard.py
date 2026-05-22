@@ -10,6 +10,34 @@ from functools import wraps
 dashboard_bp = Blueprint('dashboard', __name__)
 
 
+def ensure_uploaded_files_table():
+    """Auto-create uploaded_files table if it doesn't exist."""
+    try:
+        mydb   = get_db_connection()
+        cursor = mydb.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS uploaded_files (
+                file_id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                file_name VARCHAR(255) NOT NULL,
+                file_original VARCHAR(255) NOT NULL,
+                file_type VARCHAR(50),
+                file_path VARCHAR(500) NOT NULL,
+                file_size BIGINT DEFAULT 0,
+                shared TINYINT(1) DEFAULT 0,
+                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        """)
+        mydb.commit()
+        cursor.close()
+        mydb.close()
+    except Exception as e:
+        print(f"[Dashboard] ensure_uploaded_files_table error: {e}")
+
+ensure_uploaded_files_table()
+
+
 def login_required(f):
     from functools import wraps
     @wraps(f)
@@ -34,113 +62,194 @@ def dashboard_stats():
     cursor  = mydb.cursor()
 
     # Total tasks
-    cursor.execute("SELECT COUNT(*) FROM tasks WHERE user_id=%s", (user_id,))
-    total_tasks = cursor.fetchone()[0]
+    total_tasks = 0
+    try:
+        cursor.execute("SELECT COUNT(*) FROM tasks WHERE user_id=%s", (user_id,))
+        total_tasks = cursor.fetchone()[0]
+    except Exception as e:
+        print("Error fetching total_tasks:", repr(e))
 
     # Completed tasks
-    cursor.execute("SELECT COUNT(*) FROM tasks WHERE user_id=%s AND status='completed'", (user_id,))
-    completed_tasks = cursor.fetchone()[0]
+    completed_tasks = 0
+    try:
+        cursor.execute("SELECT COUNT(*) FROM tasks WHERE user_id=%s AND status='completed'", (user_id,))
+        completed_tasks = cursor.fetchone()[0]
+    except Exception as e:
+        print("Error fetching completed_tasks:", repr(e))
 
     # Focus stats
-    cursor.execute("""
-        SELECT COUNT(*), COALESCE(SUM(duration_minutes),0), COALESCE(SUM(sessions_count),0)
-        FROM focus WHERE user_id=%s
-    """, (user_id,))
-    focus_row      = cursor.fetchone()
-    total_sessions = focus_row[0]
-    total_minutes  = focus_row[1]
+    total_sessions = 0
+    total_minutes = 0
+    try:
+        cursor.execute("""
+            SELECT COUNT(*), COALESCE(SUM(duration_minutes),0), COALESCE(SUM(sessions_count),0)
+            FROM focus WHERE user_id=%s
+        """, (user_id,))
+        focus_row      = cursor.fetchone()
+        total_sessions = focus_row[0]
+        total_minutes  = focus_row[1]
+    except Exception as e:
+        print("Error fetching focus stats:", repr(e))
 
     # Total website time spent (for Total Study Hours card)
-    cursor.execute("SELECT COALESCE(SUM(total_minutes), 0) FROM daily_time_spent WHERE user_id=%s", (user_id,))
-    total_website_minutes = cursor.fetchone()[0]
+    total_website_minutes = 0
+    try:
+        cursor.execute("SELECT COALESCE(SUM(total_minutes), 0) FROM daily_time_spent WHERE user_id=%s", (user_id,))
+        total_website_minutes = cursor.fetchone()[0]
+    except Exception as e:
+        print("Error fetching daily_time_spent:", repr(e))
 
     # Centralized stacks & streak from users table
-    cursor.execute("SELECT stacks, streak FROM users WHERE user_id=%s", (user_id,))
-    user_row     = cursor.fetchone()
-    total_stacks = int(user_row[0]) if user_row else 0
-    streak       = int(user_row[1]) if user_row else 0
+    total_stacks = 0
+    streak = 0
+    try:
+        cursor.execute("SELECT stacks, streak FROM users WHERE user_id=%s", (user_id,))
+        user_row     = cursor.fetchone()
+        total_stacks = int(user_row[0]) if user_row else 0
+        streak       = int(user_row[1]) if user_row else 0
+    except Exception as e:
+        print("Error fetching user stats:", repr(e))
 
     # Update session with latest stacks
     session['stacks'] = total_stacks
     session['streak'] = streak
 
     # Recent tasks (last 4)
-    cursor.execute("""
-        SELECT task_title, status, priority, due_date
-        FROM tasks WHERE user_id=%s ORDER BY created_date DESC LIMIT 4
-    """, (user_id,))
-    recent_tasks = [
-        {'title': r[0], 'status': r[1], 'priority': r[2], 'due_date': str(r[3])}
-        for r in cursor.fetchall()
-    ]
+    recent_tasks = []
+    try:
+        cursor.execute("""
+            SELECT task_title, status, priority, due_date
+            FROM tasks WHERE user_id=%s ORDER BY created_date DESC LIMIT 4
+        """, (user_id,))
+        recent_tasks = [
+            {'title': r[0], 'status': r[1], 'priority': r[2], 'due_date': str(r[3])}
+            for r in cursor.fetchall()
+        ]
+    except Exception as e:
+        print("Error fetching recent_tasks:", repr(e))
 
     # Recent notes (last 4)
-    cursor.execute("""
-        SELECT notes_title, category, created_date
-        FROM notes WHERE user_id=%s ORDER BY created_date DESC LIMIT 4
-    """, (user_id,))
-    recent_notes = [
-        {'title': r[0], 'category': r[1], 'date': str(r[2])}
-        for r in cursor.fetchall()
-    ]
+    recent_notes = []
+    try:
+        cursor.execute("""
+            SELECT notes_title, category, created_date
+            FROM notes WHERE user_id=%s ORDER BY created_date DESC LIMIT 4
+        """, (user_id,))
+        recent_notes = [
+            {'title': r[0], 'category': r[1], 'date': str(r[2])}
+            for r in cursor.fetchall()
+        ]
+    except Exception as e:
+        print("Error fetching recent_notes:", repr(e))
 
     # Recent activity (last 5)
-    cursor.execute("""
-        SELECT action_type, action_desc, created_at
-        FROM activity_log WHERE user_id=%s ORDER BY created_at DESC LIMIT 5
-    """, (user_id,))
-    recent_activity = [
-        {'type': r[0], 'desc': r[1], 'time': r[2].strftime("%b %d, %I:%M %p") if r[2] else ''}
-        for r in cursor.fetchall()
-    ]
+    recent_activity = []
+    try:
+        cursor.execute("""
+            SELECT action_type, action_desc, created_at
+            FROM activity_log WHERE user_id=%s ORDER BY created_at DESC LIMIT 5
+        """, (user_id,))
+        recent_activity = [
+            {'type': r[0], 'desc': r[1], 'time': r[2].strftime("%b %d, %I:%M %p") if r[2] else ''}
+            for r in cursor.fetchall()
+        ]
+    except Exception as e:
+        print("Error fetching recent_activity:", repr(e))
 
     # Uploaded files count
-    cursor.execute("SELECT COUNT(*) FROM uploaded_files WHERE user_id=%s", (user_id,))
-    total_files = cursor.fetchone()[0]
+    total_files = 0
+    try:
+        cursor.execute("SELECT COUNT(*) FROM uploaded_files WHERE user_id=%s", (user_id,))
+        total_files = cursor.fetchone()[0]
+    except Exception as e:
+        print("Warning: failed to query uploaded_files table, attempting auto-repair:", repr(e))
+        try:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS uploaded_files (
+                    file_id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    file_name VARCHAR(255) NOT NULL,
+                    file_original VARCHAR(255) NOT NULL,
+                    file_type VARCHAR(50),
+                    file_path VARCHAR(500) NOT NULL,
+                    file_size BIGINT DEFAULT 0,
+                    shared TINYINT(1) DEFAULT 0,
+                    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+            """)
+            mydb.commit()
+            total_files = 0
+        except Exception as creation_err:
+            print("Failed to auto-create uploaded_files table:", repr(creation_err))
 
     # --- Chart Data ---
     
     # Total notes created
-    cursor.execute("SELECT COUNT(*) FROM notes WHERE user_id=%s", (user_id,))
-    total_notes = cursor.fetchone()[0]
+    total_notes = 0
+    try:
+        cursor.execute("SELECT COUNT(*) FROM notes WHERE user_id=%s", (user_id,))
+        total_notes = cursor.fetchone()[0]
+    except Exception as e:
+        print("Error fetching total_notes:", repr(e))
 
     # Total classrooms joined
-    cursor.execute("SELECT COUNT(*) FROM room_members WHERE member_id=%s", (user_id,))
-    total_classrooms = cursor.fetchone()[0]
+    total_classrooms = 0
+    try:
+        cursor.execute("SELECT COUNT(*) FROM room_members WHERE member_id=%s", (user_id,))
+        total_classrooms = cursor.fetchone()[0]
+    except Exception as e:
+        print("Error fetching total_classrooms:", repr(e))
 
     # Total communities joined
-    cursor.execute("SELECT COUNT(*) FROM group_members WHERE member_id=%s", (user_id,))
-    total_communities = cursor.fetchone()[0]
+    total_communities = 0
+    try:
+        cursor.execute("SELECT COUNT(*) FROM group_members WHERE member_id=%s", (user_id,))
+        total_communities = cursor.fetchone()[0]
+    except Exception as e:
+        print("Error fetching total_communities:", repr(e))
 
     # Daily time spent (last 7 days)
-    cursor.execute("""
-        SELECT DATE(date) as cdate, SUM(total_minutes) as mins
-        FROM daily_time_spent
-        WHERE user_id=%s AND date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-        GROUP BY DATE(date)
-        ORDER BY DATE(date) ASC
-    """, (user_id,))
-    daily_time = [{'date': str(r[0]), 'minutes': int(r[1]) if r[1] else 0} for r in cursor.fetchall()]
+    daily_time = []
+    try:
+        cursor.execute("""
+            SELECT DATE(date) as cdate, SUM(total_minutes) as mins
+            FROM daily_time_spent
+            WHERE user_id=%s AND date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            GROUP BY DATE(date)
+            ORDER BY DATE(date) ASC
+        """, (user_id,))
+        daily_time = [{'date': str(r[0]), 'minutes': int(r[1]) if r[1] else 0} for r in cursor.fetchall()]
+    except Exception as e:
+        print("Error fetching daily_time:", repr(e))
 
     # Weekly time spent (last 4 weeks)
-    cursor.execute("""
-        SELECT CONCAT(YEAR(date), '-W', LPAD(WEEK(date), 2, '0')) as cdate, SUM(total_minutes) as mins
-        FROM daily_time_spent
-        WHERE user_id=%s AND date >= DATE_SUB(CURDATE(), INTERVAL 4 WEEK)
-        GROUP BY YEAR(date), WEEK(date)
-        ORDER BY YEAR(date), WEEK(date) ASC
-    """, (user_id,))
-    weekly_time = [{'date': str(r[0]), 'minutes': int(r[1]) if r[1] else 0} for r in cursor.fetchall()]
+    weekly_time = []
+    try:
+        cursor.execute("""
+            SELECT CONCAT(YEAR(date), '-W', LPAD(WEEK(date), 2, '0')) as cdate, SUM(total_minutes) as mins
+            FROM daily_time_spent
+            WHERE user_id=%s AND date >= DATE_SUB(CURDATE(), INTERVAL 4 WEEK)
+            GROUP BY YEAR(date), WEEK(date)
+            ORDER BY YEAR(date), WEEK(date) ASC
+        """, (user_id,))
+        weekly_time = [{'date': str(r[0]), 'minutes': int(r[1]) if r[1] else 0} for r in cursor.fetchall()]
+    except Exception as e:
+        print("Error fetching weekly_time:", repr(e))
 
     # Monthly time spent (last 12 months)
-    cursor.execute("""
-        SELECT DATE_FORMAT(date, '%Y-%m') as cdate, SUM(total_minutes) as mins
-        FROM daily_time_spent
-        WHERE user_id=%s AND date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
-        GROUP BY DATE_FORMAT(date, '%Y-%m')
-        ORDER BY DATE_FORMAT(date, '%Y-%m') ASC
-    """, (user_id,))
-    monthly_time = [{'date': str(r[0]), 'minutes': int(r[1]) if r[1] else 0} for r in cursor.fetchall()]
+    monthly_time = []
+    try:
+        cursor.execute("""
+            SELECT DATE_FORMAT(date, '%Y-%m') as cdate, SUM(total_minutes) as mins
+            FROM daily_time_spent
+            WHERE user_id=%s AND date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+            GROUP BY DATE_FORMAT(date, '%Y-%m')
+            ORDER BY DATE_FORMAT(date, '%Y-%m') ASC
+        """, (user_id,))
+        monthly_time = [{'date': str(r[0]), 'minutes': int(r[1]) if r[1] else 0} for r in cursor.fetchall()]
+    except Exception as e:
+        print("Error fetching monthly_time:", repr(e))
 
     cursor.close()
     mydb.close()
