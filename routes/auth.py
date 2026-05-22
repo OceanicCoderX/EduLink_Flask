@@ -15,6 +15,31 @@ from datetime import datetime, timedelta
 auth_bp = Blueprint('auth', __name__)
 
 
+def ensure_otp_codes_table():
+    """Auto-create otp_codes table if it doesn't exist."""
+    try:
+        mydb   = get_db_connection()
+        cursor = mydb.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS otp_codes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                email VARCHAR(250) NOT NULL,
+                otp_code VARCHAR(10) NOT NULL,
+                expires_at DATETIME NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_email (email)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        """)
+        mydb.commit()
+        cursor.close()
+        mydb.close()
+    except Exception as e:
+        print(f"[Auth] ensure_otp_codes_table error: {e}")
+
+ensure_otp_codes_table()
+
+
+
 # ── Helper ───────────────────────────────────────────────────
 def set_user_session(user_row):
     """
@@ -208,20 +233,27 @@ def forgot_password():
         otp = str(random.randint(100000, 999999))
         expiry = datetime.now() + timedelta(minutes=10)
 
-        mydb2 = get_db_connection()
-        cursor2 = mydb2.cursor()
-        cursor2.execute("DELETE FROM otp_codes WHERE email=%s", (email,))
-        cursor2.execute("INSERT INTO otp_codes (email, otp_code, expires_at) VALUES (%s, %s, %s)", (email, otp, expiry))
-        mydb2.commit()
-        cursor2.close()
-        mydb2.close()
+        try:
+            mydb2 = get_db_connection()
+            cursor2 = mydb2.cursor()
+            cursor2.execute("DELETE FROM otp_codes WHERE email=%s", (email,))
+            cursor2.execute("INSERT INTO otp_codes (email, otp_code, expires_at) VALUES (%s, %s, %s)", (email, otp, expiry))
+            mydb2.commit()
+            cursor2.close()
+            mydb2.close()
+        except Exception as db_err:
+            print("Failed to save OTP to database:", repr(db_err))
+            return render_template('forgot_password.html', error="Database error. Please try again later.")
 
         # Send OTP via Email
         subject = "EduLink - Password Reset OTP"
         body = f"Your OTP for password reset is: {otp}\n\nThis code will expire in 10 minutes.\nIf you didn't request this, please ignore this email."
-        send_email(email, subject, body)
+        email_sent = send_email(email, subject, body)
 
-        return render_template('verify_otp.html', email=email)
+        if email_sent:
+            return render_template('verify_otp.html', email=email)
+        else:
+            return render_template('forgot_password.html', error="Failed to send OTP email. Please check your SMTP mail server settings or try again.")
     else:
         return render_template('forgot_password.html', error="Email not found!")
 

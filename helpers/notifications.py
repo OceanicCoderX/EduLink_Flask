@@ -26,7 +26,11 @@ def send_email(to_email: str, subject: str, body: str, app=None) -> bool:
         
         # Use current_app if no app instance is passed
         target_app = app or current_app
-        mail = Mail(target_app)
+        
+        # Reuse existing Mail extension if registered
+        mail = target_app.extensions.get('mail') if target_app else None
+        if not mail:
+            mail = Mail(target_app)
         
         msg  = Message(subject=subject, recipients=[to_email], body=body,
                        sender=MAIL_DEFAULT_SENDER)
