@@ -7,7 +7,7 @@ from mysql.connector import errorcode
 from config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD
 import os
 
-SQL_FILE = os.path.join(os.path.dirname(__file__), 'edulink_updated.sql')
+SQL_FILE = os.path.join(os.path.dirname(__file__), 'edulink.sql')
 
 def run_sql_file(path):
     with open(path, 'r', encoding='utf-8') as f:

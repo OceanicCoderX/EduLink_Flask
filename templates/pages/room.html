@@ -1107,6 +1107,16 @@ const shareScreenBtn = document.getElementById('shareScreenBtn');
 if (shareScreenBtn) {
     shareScreenBtn.addEventListener('click', async () => {
         if (!isScreenSharing) {
+            // Check for unsupported devices or unsecure HTTP contexts
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                alert(
+                    "⚠️ Screen Sharing is not supported on this device/browser because:\n\n" +
+                    "1. You are accessing via an insecure HTTP connection. Modern browsers require HTTPS (Secure Context) or localhost for screen sharing.\n" +
+                    "2. Mobile browsers (iOS/Android) do not support screen sharing from web apps.\n\n" +
+                    "Please open this page from a Desktop computer using HTTPS to share your screen!"
+                );
+                return;
+            }
             try {
                 screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                 const screenTrack = screenStream.getVideoTracks()[0];

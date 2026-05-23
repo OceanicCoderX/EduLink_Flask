@@ -1,3 +1,4 @@
+document.addEventListener('DOMContentLoaded', function () {
         // Timer State
         let currentMode = 'classic';
         let focusTime = 25 * 60;
@@ -260,7 +261,7 @@
 
         function updateStats() {
             if (document.getElementById('sessionsCount')) document.getElementById('sessionsCount').textContent = sessionsCompleted;
-            if (document.getElementById('totalTime')) document.getElementById('totalTime').textContent = sessionsCompleted;
+            if (document.getElementById('totalTime')) document.getElementById('totalTime').textContent = totalFocusMinutes;
             if (document.getElementById('streakCount')) document.getElementById('streakCount').textContent = currentStreak;
         }
 
@@ -377,3 +378,4 @@
                 e.returnValue = '';
             }
         });
+});
